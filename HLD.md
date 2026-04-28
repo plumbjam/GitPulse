@@ -336,75 +336,78 @@ The app should use a normalised internal model and avoid coupling UI/audio/visua
 
 ```ts
 export type GitPulseAccount = {
-  username: string;
-  displayName?: string;
-  avatarUrl?: string;
-  profileUrl: string;
-  publicRepoCount?: number;
-};
+  username: string
+  displayName?: string
+  avatarUrl?: string
+  profileUrl: string
+  publicRepoCount?: number
+}
 ```
 
 ### 8.2 Repo model
 
 ```ts
 export type GitPulseRepo = {
-  id: string;
-  canonicalName: string; // owner/name
-  owner: string;
-  name: string;
-  url: string;
-  primaryLanguage?: string;
-  languages: Record<string, number>;
-  stars: number;
-  forks: number;
-  createdAt: string;
-  pushedAt: string;
-  isFork: boolean;
-  sourceUsernames: string[];
-};
+  id: string
+  canonicalName: string // owner/name
+  owner: string
+  name: string
+  url: string
+  primaryLanguage?: string
+  languages: Record<string, number>
+  stars: number
+  forks: number
+  createdAt: string
+  pushedAt: string
+  isFork: boolean
+  sourceUsernames: string[]
+}
 ```
 
 ### 8.3 Activity day model
 
 ```ts
 export type GitPulseActivityDay = {
-  date: string;
-  commitCountApprox: number;
-  issueCount?: number;
-  pullRequestCount?: number;
-  repoTouches: string[];
-  sourceBreakdown: Record<string, {
-    commitCountApprox: number;
-    repoTouches: string[];
-  }>;
-};
+  date: string
+  commitCountApprox: number
+  issueCount?: number
+  pullRequestCount?: number
+  repoTouches: string[]
+  sourceBreakdown: Record<
+    string,
+    {
+      commitCountApprox: number
+      repoTouches: string[]
+    }
+  >
+}
 ```
 
 ### 8.4 Dataset model
 
 ```ts
 export type GitPulseDataset = {
-  accounts: GitPulseAccount[];
+  accounts: GitPulseAccount[]
   mergedIdentity: {
-    label: string;
-    usernames: string[];
-    avatarUrls: string[];
-  };
-  repos: GitPulseRepo[];
-  days: GitPulseActivityDay[];
+    label: string
+    usernames: string[]
+    avatarUrls: string[]
+  }
+  repos: GitPulseRepo[]
+  days: GitPulseActivityDay[]
   summary: {
-    totalRepos: number;
-    activeRepos: number;
-    dominantLanguages: string[];
-    sourceUsernames: string[];
-    activityScore: number;
-    consistencyScore: number;
-    burstinessScore: number;
-    mergeMode: GitPulseMergeMode;
-  };
-};
+    totalRepos: number
+    activeRepos: number
+    dominantLanguages: string[]
+    sourceUsernames: string[]
+    activityScore: number
+    consistencyScore: number
+    burstinessScore: number
+    mergeMode: GitPulseMergeMode
+  }
+}
 
-export type GitPulseMergeMode = 'composite' | 'layered' | 'compare';
+export type GitPulseMergeMode = 'composite' | 'layered' | 'compare'
 ```
 
 ---
@@ -413,17 +416,17 @@ export type GitPulseMergeMode = 'composite' | 'layered' | 'compare';
 
 ### 9.1 Core mapping
 
-| GitHub signal | Audio interpretation |
-|---|---|
-| Commit/activity count | Drum hits / rhythmic pulses |
-| Repository | Instrument track / channel |
-| Primary language | Instrument timbre / scale colour |
-| Stars | Reverb / brightness / sustain |
-| Forks | Delay / echo repeats |
-| Recent activity | Louder/brighter sounds |
-| Dormant repos | Filtered/muffled layers |
-| Streaks | Crescendos / sustained notes |
-| Account source | Layer/pan/channel in multi-account modes |
+| GitHub signal         | Audio interpretation                     |
+| --------------------- | ---------------------------------------- |
+| Commit/activity count | Drum hits / rhythmic pulses              |
+| Repository            | Instrument track / channel               |
+| Primary language      | Instrument timbre / scale colour         |
+| Stars                 | Reverb / brightness / sustain            |
+| Forks                 | Delay / echo repeats                     |
+| Recent activity       | Louder/brighter sounds                   |
+| Dormant repos         | Filtered/muffled layers                  |
+| Streaks               | Crescendos / sustained notes             |
+| Account source        | Layer/pan/channel in multi-account modes |
 
 ### 9.2 Multi-account audio mapping
 
@@ -515,16 +518,16 @@ Initial scene:
 
 ### 11.2 GitHub-to-visual mapping
 
-| GitHub signal | Visual interpretation |
-|---|---|
-| User / merged identity | Central core |
-| Repositories | Orbiting nodes |
-| Languages | Colours/materials |
-| Stars | Node size/glow |
-| Recent activity | Brightness/pulse frequency |
-| Dormant activity | Dim/frozen nodes |
-| Multi-account sources | Rings, colour accents, lanes |
-| Audio analyser values | Scale, particle movement, bloom, camera drift |
+| GitHub signal          | Visual interpretation                         |
+| ---------------------- | --------------------------------------------- |
+| User / merged identity | Central core                                  |
+| Repositories           | Orbiting nodes                                |
+| Languages              | Colours/materials                             |
+| Stars                  | Node size/glow                                |
+| Recent activity        | Brightness/pulse frequency                    |
+| Dormant activity       | Dim/frozen nodes                              |
+| Multi-account sources  | Rings, colour accents, lanes                  |
+| Audio analyser values  | Scale, particle movement, bloom, camera drift |
 
 ### 11.3 Visual modes
 

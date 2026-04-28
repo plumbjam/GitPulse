@@ -40,10 +40,10 @@ Not implemented yet:
 - lucide-react
 - framer-motion
 - zustand
-- Tone.js *(installed, not yet used for playback)*
-- three *(installed, visual engine pending)*
-- @react-three/fiber *(installed, scene pending)*
-- @react-three/drei *(installed, scene pending)*
+- Tone.js _(installed, not yet used for playback)_
+- three _(installed, visual engine pending)_
+- @react-three/fiber _(installed, scene pending)_
+- @react-three/drei _(installed, scene pending)_
 - Vitest + React Testing Library
 - ESLint + Prettier
 - Husky + lint-staged

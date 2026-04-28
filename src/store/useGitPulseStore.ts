@@ -47,7 +47,8 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       draftUsername: '',
     }))
   },
-  removeIdentity: (id) => set((state) => ({ identities: state.identities.filter((item) => item.id !== id) })),
+  removeIdentity: (id) =>
+    set((state) => ({ identities: state.identities.filter((item) => item.id !== id) })),
   setTempo: (tempo) => set({ tempo }),
   setIntensity: (intensity) => set({ intensity }),
 }))

@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 
 export function AccountInputPanel() {
-  const { draftUsername, identities, setDraftUsername, addIdentity, removeIdentity } = useGitPulseStore()
+  const { draftUsername, identities, setDraftUsername, addIdentity, removeIdentity } =
+    useGitPulseStore()
 
   return (
     <Card className="space-y-4">
@@ -16,8 +17,8 @@ export function AccountInputPanel() {
           <Badge>{identities.length} identities</Badge>
         </div>
         <p className="text-xs text-muted-foreground">
-          Future stages will combine personal, work, and optional org-linked profiles into one normalized
-          GitPulse dataset.
+          Future stages will combine personal, work, and optional org-linked profiles into one
+          normalized GitPulse dataset.
         </p>
       </div>
       <label className="space-y-2 text-sm" htmlFor="username-input">
@@ -36,12 +37,22 @@ export function AccountInputPanel() {
       </label>
       <ul className="space-y-2">
         {identities.map((identity) => (
-          <li key={identity.id} className="flex items-center justify-between rounded-md border border-white/10 p-2 text-sm">
+          <li
+            key={identity.id}
+            className="flex items-center justify-between rounded-md border border-white/10 p-2 text-sm"
+          >
             <div>
               <p className="font-medium">@{identity.username}</p>
-              <p className="text-xs capitalize text-muted-foreground">{identity.role ?? 'other'} account</p>
+              <p className="text-xs capitalize text-muted-foreground">
+                {identity.role ?? 'other'} account
+              </p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => removeIdentity(identity.id)} aria-label={`Remove ${identity.username}`}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => removeIdentity(identity.id)}
+              aria-label={`Remove ${identity.username}`}
+            >
               <X className="h-4 w-4" aria-hidden />
             </Button>
           </li>
