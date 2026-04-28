@@ -18,18 +18,18 @@ The initial version should avoid backend complexity, OAuth, AI features, and exp
 
 ## 2. Phase overview
 
-| Phase | Name | Outcome |
-|---|---|---|
-| 0 | Concept lock | Product scope, name, initial mappings agreed |
-| 1 | App foundation | React/Vite app, layout, CI, deployment |
-| 2 | GitHub ingestion | Public GitHub fetch, normalised data, demo data |
-| 3 | Multi-account merge | Composite profile support and deduplication |
-| 4 | Audio MVP | Tone.js engine and generated loop |
-| 5 | Visual MVP | React Three Fiber visualiser synced to audio |
-| 6 | Mood and controls | Presets, tempo, intensity, remix, UI polish |
-| 7 | Repo polish | README, style guide, docs, screenshots, deploy |
-| 8 | Advanced data | GraphQL contribution calendar and richer activity |
-| 9 | Creative expansion | Layered accounts, exports, AI audio overlays |
+| Phase | Name                | Outcome                                           |
+| ----- | ------------------- | ------------------------------------------------- |
+| 0     | Concept lock        | Product scope, name, initial mappings agreed      |
+| 1     | App foundation      | React/Vite app, layout, CI, deployment            |
+| 2     | GitHub ingestion    | Public GitHub fetch, normalised data, demo data   |
+| 3     | Multi-account merge | Composite profile support and deduplication       |
+| 4     | Audio MVP           | Tone.js engine and generated loop                 |
+| 5     | Visual MVP          | React Three Fiber visualiser synced to audio      |
+| 6     | Mood and controls   | Presets, tempo, intensity, remix, UI polish       |
+| 7     | Repo polish         | README, style guide, docs, screenshots, deploy    |
+| 8     | Advanced data       | GraphQL contribution calendar and richer activity |
+| 9     | Creative expansion  | Layered accounts, exports, AI audio overlays      |
 
 ---
 
@@ -510,14 +510,14 @@ Elements:
 
 ### Step 5.3 — Map data to visuals
 
-| Data | Visual |
-|---|---|
-| Merged identity | Central core |
-| Repos | Orbiting nodes |
-| Stars | Node size/glow |
-| Languages | Colours |
-| Recent activity | Brightness/pulse rate |
-| Account source | Subtle ring/outline/accent |
+| Data            | Visual                     |
+| --------------- | -------------------------- |
+| Merged identity | Central core               |
+| Repos           | Orbiting nodes             |
+| Stars           | Node size/glow             |
+| Languages       | Colours                    |
+| Recent activity | Brightness/pulse rate      |
+| Account source  | Subtle ring/outline/accent |
 
 ### Step 5.4 — Connect audio analyser
 

@@ -66,6 +66,7 @@ Use this structure when asking an agent to do work.
 GitPulse is a React/Vite/TypeScript app that turns one or more GitHub usernames into generative audio and audio-reactive visuals.
 
 Important product rules:
+
 - Multi-account merge is a first-class feature.
 - GitHub data must be normalised before audio/visual use.
 - Audio must only start after explicit user interaction.
@@ -87,6 +88,7 @@ Important product rules:
 # Checks
 
 Run:
+
 - npm run typecheck
 - npm run lint
 - npm run build
@@ -94,6 +96,7 @@ Run:
 # Output required
 
 Return:
+
 1. files changed;
 2. summary of changes;
 3. checks run and results;
@@ -116,6 +119,7 @@ GitPulse turns GitHub activity into generative audio and audio-reactive visuals.
 # Required behaviour
 
 Create a React/Vite/TypeScript/Tailwind app shell with:
+
 - Header
 - UsernameForm
 - AccountChips
@@ -183,6 +187,7 @@ Do not add backend code.
 # Checks
 
 Run:
+
 - npm run typecheck
 - npm run build
 
@@ -224,6 +229,7 @@ Do not autoplay.
 # Checks
 
 Run:
+
 - npm run typecheck
 - npm run build
 
@@ -264,6 +270,7 @@ Do not add multiple visual modes unless trivial.
 # Checks
 
 Run:
+
 - npm run typecheck
 - npm run build
 

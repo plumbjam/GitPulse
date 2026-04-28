@@ -37,7 +37,7 @@ Tone.js + React Three Fiber
 ### 3.1 Merge mode
 
 ```ts
-export type GitPulseMergeMode = 'composite' | 'layered' | 'compare';
+export type GitPulseMergeMode = 'composite' | 'layered' | 'compare'
 ```
 
 MVP uses:
@@ -52,12 +52,12 @@ MVP uses:
 
 ```ts
 export type GitPulseAccount = {
-  username: string;
-  displayName?: string;
-  avatarUrl?: string;
-  profileUrl: string;
-  publicRepoCount?: number;
-};
+  username: string
+  displayName?: string
+  avatarUrl?: string
+  profileUrl: string
+  publicRepoCount?: number
+}
 ```
 
 ---
@@ -66,20 +66,20 @@ export type GitPulseAccount = {
 
 ```ts
 export type GitPulseRepo = {
-  id: string;
-  canonicalName: string; // owner/name
-  owner: string;
-  name: string;
-  url: string;
-  primaryLanguage?: string;
-  languages: Record<string, number>;
-  stars: number;
-  forks: number;
-  createdAt: string;
-  pushedAt: string;
-  isFork: boolean;
-  sourceUsernames: string[];
-};
+  id: string
+  canonicalName: string // owner/name
+  owner: string
+  name: string
+  url: string
+  primaryLanguage?: string
+  languages: Record<string, number>
+  stars: number
+  forks: number
+  createdAt: string
+  pushedAt: string
+  isFork: boolean
+  sourceUsernames: string[]
+}
 ```
 
 ---
@@ -88,16 +88,19 @@ export type GitPulseRepo = {
 
 ```ts
 export type GitPulseActivityDay = {
-  date: string;
-  commitCountApprox: number;
-  issueCount?: number;
-  pullRequestCount?: number;
-  repoTouches: string[];
-  sourceBreakdown: Record<string, {
-    commitCountApprox: number;
-    repoTouches: string[];
-  }>;
-};
+  date: string
+  commitCountApprox: number
+  issueCount?: number
+  pullRequestCount?: number
+  repoTouches: string[]
+  sourceBreakdown: Record<
+    string,
+    {
+      commitCountApprox: number
+      repoTouches: string[]
+    }
+  >
+}
 ```
 
 ---
@@ -106,25 +109,25 @@ export type GitPulseActivityDay = {
 
 ```ts
 export type GitPulseDataset = {
-  accounts: GitPulseAccount[];
+  accounts: GitPulseAccount[]
   mergedIdentity: {
-    label: string;
-    usernames: string[];
-    avatarUrls: string[];
-  };
-  repos: GitPulseRepo[];
-  days: GitPulseActivityDay[];
+    label: string
+    usernames: string[]
+    avatarUrls: string[]
+  }
+  repos: GitPulseRepo[]
+  days: GitPulseActivityDay[]
   summary: {
-    totalRepos: number;
-    activeRepos: number;
-    dominantLanguages: string[];
-    sourceUsernames: string[];
-    activityScore: number;
-    consistencyScore: number;
-    burstinessScore: number;
-    mergeMode: GitPulseMergeMode;
-  };
-};
+    totalRepos: number
+    activeRepos: number
+    dominantLanguages: string[]
+    sourceUsernames: string[]
+    activityScore: number
+    consistencyScore: number
+    burstinessScore: number
+    mergeMode: GitPulseMergeMode
+  }
+}
 ```
 
 ---
@@ -273,19 +276,19 @@ burstinessScore = variance of activity count per active day
 
 ### 6.1 Core mapping table
 
-| GitHub signal | Audio mapping |
-|---|---|
-| Activity/commit count | Drum density / pulse frequency |
-| Repository | Instrument layer / sequence lane |
-| Primary language | Instrument timbre / note palette |
-| Language diversity | Harmonic richness / stereo width |
-| Stars | Reverb / brightness / sustain |
-| Forks | Delay / echo repeats |
-| Recent activity | Volume / filter brightness |
-| Dormant repos | Low-pass filter / quieter layer |
-| Consistency score | Pad sustain / smoother rhythm |
-| Burstiness score | Fills / accents / glitch bursts |
-| Multiple accounts | Composite, layered, or split channels |
+| GitHub signal         | Audio mapping                         |
+| --------------------- | ------------------------------------- |
+| Activity/commit count | Drum density / pulse frequency        |
+| Repository            | Instrument layer / sequence lane      |
+| Primary language      | Instrument timbre / note palette      |
+| Language diversity    | Harmonic richness / stereo width      |
+| Stars                 | Reverb / brightness / sustain         |
+| Forks                 | Delay / echo repeats                  |
+| Recent activity       | Volume / filter brightness            |
+| Dormant repos         | Low-pass filter / quieter layer       |
+| Consistency score     | Pad sustain / smoother rhythm         |
+| Burstiness score      | Fills / accents / glitch bursts       |
+| Multiple accounts     | Composite, layered, or split channels |
 
 ---
 
@@ -295,13 +298,13 @@ Mood should alter the same data mapping.
 
 Example:
 
-| Signal | Futuristic | Playful | Epic |
-|---|---|---|---|
-| Activity | Clean electronic kick | Bouncy percussion | Cinematic drum hit |
-| Repo | Synth arp | Pluck pattern | Low brass/string pad |
-| Stars | Shimmer reverb | Sparkle accent | Huge hall reverb |
-| Forks | Digital delay | Ping-pong echo | Distant echo swell |
-| Burstiness | Laser fill | Percussion roll | Taiko-style impact |
+| Signal     | Futuristic            | Playful           | Epic                 |
+| ---------- | --------------------- | ----------------- | -------------------- |
+| Activity   | Clean electronic kick | Bouncy percussion | Cinematic drum hit   |
+| Repo       | Synth arp             | Pluck pattern     | Low brass/string pad |
+| Stars      | Shimmer reverb        | Sparkle accent    | Huge hall reverb     |
+| Forks      | Digital delay         | Ping-pong echo    | Distant echo swell   |
+| Burstiness | Laser fill            | Percussion roll   | Taiko-style impact   |
 
 ---
 
@@ -359,11 +362,11 @@ Possible time ranges:
 
 Mapping options:
 
-| Time range | Loop mapping |
-|---|---|
-| 30 days | roughly 2 days per bar |
-| 90 days | roughly 5-6 days per bar |
-| 1 year | roughly 22-23 days per bar |
+| Time range | Loop mapping               |
+| ---------- | -------------------------- |
+| 30 days    | roughly 2 days per bar     |
+| 90 days    | roughly 5-6 days per bar   |
+| 1 year     | roughly 22-23 days per bar |
 
 This can be refined later.
 
@@ -373,20 +376,20 @@ This can be refined later.
 
 ### 7.1 Core visual mapping table
 
-| GitHub signal | Visual mapping |
-|---|---|
-| Merged identity | Central core |
-| Account source | Rings/chips/accent colours |
-| Repository | Orbiting node |
-| Repo stars | Node size/glow |
-| Repo forks | Branching trails |
-| Primary language | Colour/material |
-| Recent activity | Brightness/pulse frequency |
-| Dormant repo | Dim/distant node |
-| Activity score | Particle density |
-| Consistency score | Smooth orbital motion |
-| Burstiness score | Shockwaves/explosions |
-| Audio analyser | Scale/glow/motion amplitude |
+| GitHub signal     | Visual mapping              |
+| ----------------- | --------------------------- |
+| Merged identity   | Central core                |
+| Account source    | Rings/chips/accent colours  |
+| Repository        | Orbiting node               |
+| Repo stars        | Node size/glow              |
+| Repo forks        | Branching trails            |
+| Primary language  | Colour/material             |
+| Recent activity   | Brightness/pulse frequency  |
+| Dormant repo      | Dim/distant node            |
+| Activity score    | Particle density            |
+| Consistency score | Smooth orbital motion       |
+| Burstiness score  | Shockwaves/explosions       |
+| Audio analyser    | Scale/glow/motion amplitude |
 
 ---
 
@@ -430,29 +433,29 @@ Example:
 export const languageMappings = {
   TypeScript: {
     colour: '#38bdf8',
-    instrumentHint: 'leadSynth'
+    instrumentHint: 'leadSynth',
   },
   JavaScript: {
     colour: '#facc15',
-    instrumentHint: 'pluckSynth'
+    instrumentHint: 'pluckSynth',
   },
   Python: {
     colour: '#60a5fa',
-    instrumentHint: 'softKeys'
+    instrumentHint: 'softKeys',
   },
   CSharp: {
     colour: '#a78bfa',
-    instrumentHint: 'bassSynth'
+    instrumentHint: 'bassSynth',
   },
   Rust: {
     colour: '#fb923c',
-    instrumentHint: 'distortedSynth'
+    instrumentHint: 'distortedSynth',
   },
   Go: {
     colour: '#22d3ee',
-    instrumentHint: 'arpSynth'
-  }
-};
+    instrumentHint: 'arpSynth',
+  },
+}
 ```
 
 Unknown languages should fall back to a neutral mapping.

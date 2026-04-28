@@ -306,14 +306,14 @@ MVP should use:
 
 Each mood should have a recognisable identity.
 
-| Mood | Audio feel |
-|---|---|
+| Mood       | Audio feel                           |
+| ---------- | ------------------------------------ |
 | Futuristic | Clean synth pulses, electronic drums |
-| Playful | Bouncy plucks, quirky percussion |
-| Epic | Cinematic hits, pads, reverb |
-| Lo-fi | Soft drums, warm bass, tape wobble |
-| Glitch | Broken rhythms, bitcrush, stutters |
-| Ambient | Slow pads, sparse pulses |
+| Playful    | Bouncy plucks, quirky percussion     |
+| Epic       | Cinematic hits, pads, reverb         |
+| Lo-fi      | Soft drums, warm bass, tape wobble   |
+| Glitch     | Broken rhythms, bitcrush, stutters   |
+| Ambient    | Slow pads, sparse pulses             |
 
 ---
 
