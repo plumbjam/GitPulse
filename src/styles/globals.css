@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --background: 225 40% 7%;
+  --foreground: 210 40% 96%;
+  --card: 220 30% 12%;
+  --card-foreground: 210 40% 96%;
+  --muted: 226 18% 22%;
+  --muted-foreground: 215 20% 72%;
+  --border: 223 24% 26%;
+  --input: 223 24% 29%;
+  --primary: 188 95% 56%;
+  --primary-foreground: 225 40% 6%;
+}
+
+* {
+  @apply border-border;
+}
+
+body {
+  @apply m-0 bg-background text-foreground antialiased;
+  font-family: Inter, 'Segoe UI', Roboto, sans-serif;
+}

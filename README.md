@@ -2,253 +2,146 @@
 
 > Your GitHub activity has a sound.
 
-GitPulse is an open-source web app that turns one or more GitHub usernames into a generative audio-visual experience.
+GitPulse is an open-source creative web app that turns one or more GitHub identities into a future audio-visual coding signature.
 
-Enter a GitHub username, or combine multiple accounts, and GitPulse transforms public GitHub activity into music, rhythm, motion, and reactive visuals.
+## Stage 1 status (Application Foundation)
 
-Think:
+Stage 1 is complete as a polished **foundation shell**.
 
-> Spotify Wrapped meets GitHub contributions meets old-school music visualiser meets futuristic generative art.
+Implemented in this stage:
 
----
+- React + Vite + TypeScript app foundation;
+- futuristic dark UI shell and visual identity;
+- multi-account merged identity input placeholders;
+- mood selector placeholders;
+- transport (playback) placeholder controls;
+- visualiser stage placeholder animations;
+- typed domain model and initial Zustand store;
+- Tailwind + shadcn/ui-style component foundation;
+- Vitest + React Testing Library smoke test;
+- ESLint + Prettier + Husky + lint-staged quality gates;
+- GitHub Actions CI and semantic version tag workflow prep.
 
-## What it does
+Not implemented yet:
 
-GitPulse fetches public GitHub activity and translates it into:
+- live GitHub API data ingestion;
+- audio generation/playback with Tone.js;
+- real Three.js / React Three Fiber visualisation engine;
+- backend, auth, exports, deployment pipeline.
 
-- generative music;
-- audio-reactive visuals;
-- mood-based presets;
-- tweakable mappings between GitHub activity and sound;
-- merged multi-account developer profiles.
+## Stack
 
-Example use cases:
-
-```text
-alice → one personal GitPulse track
-alice, alice-work → one merged personal + work GitPulse track
-```
-
----
-
-## Core concept
-
-GitPulse does not just display GitHub data.
-
-It translates it.
-
-| GitHub signal | Audio/visual interpretation |
-|---|---|
-| Commits/activity | Beats, pulses, particle bursts |
-| Repositories | Instrument layers, orbiting nodes |
-| Languages | Timbres, colours, materials |
-| Stars | Glow, reverb, brightness |
-| Forks | Echoes, branching trails |
-| Recent activity | Brighter, louder, more energetic patterns |
-| Dormant repos | Dimmed, filtered, distant elements |
-| Multiple accounts | Composite or layered identity |
-
----
-
-## Multi-account support
-
-GitPulse supports the idea of merging multiple GitHub accounts into one creative profile.
-
-This is useful when a developer has:
-
-- a personal GitHub account;
-- a work GitHub account;
-- legacy accounts;
-- separate open-source and commercial identities.
-
-MVP behaviour:
-
-```text
-Composite Merge
-```
-
-That means multiple usernames are merged into one combined activity dataset and used to generate a single GitPulse track.
-
-Future modes may include:
-
-- **Layered Mix** — each account becomes a different instrument layer;
-- **Compare Mode** — accounts remain visually distinct but play on a shared timeline;
-- **Mute/Solo Accounts** — isolate the sound of individual accounts.
-
----
-
-## Planned tech stack
-
+- npm
 - React
-- TypeScript
 - Vite
+- TypeScript
 - Tailwind CSS
-- Tone.js
-- Three.js
-- React Three Fiber
-- Drei
-- Framer Motion
-- Zustand or lightweight React state
+- shadcn/ui-style primitives
+- lucide-react
+- framer-motion
+- zustand
+- Tone.js *(installed, not yet used for playback)*
+- three *(installed, visual engine pending)*
+- @react-three/fiber *(installed, scene pending)*
+- @react-three/drei *(installed, scene pending)*
+- Vitest + React Testing Library
+- ESLint + Prettier
+- Husky + lint-staged
 
-The MVP is designed to run as a static frontend app using public GitHub data.
-
-A backend may be added later for:
-
-- GitHub token protection;
-- caching;
-- GraphQL contribution calendar data;
-- share links;
-- audio/video export;
-- private contribution support.
-
----
-
-## MVP scope
-
-The first version should include:
-
-- GitHub username input;
-- multiple username input;
-- public profile/repo/language fetch;
-- normalised internal data model;
-- composite multi-account merge;
-- demo dataset fallback;
-- Tone.js generated audio loop;
-- React Three Fiber visualiser;
-- three mood presets: Futuristic, Playful, Epic;
-- play/pause controls;
-- tempo and intensity controls;
-- remix seed;
-- deployable static site.
-
-The first version should not include:
-
-- OAuth login;
-- private repositories;
-- user accounts;
-- payments;
-- AI-generated audio;
-- audio/video export;
-- backend database.
-
----
-
-## Mood presets
-
-Initial moods:
-
-### Futuristic
-
-Clean synths, electronic pulses, neon visuals, sharp geometry.
-
-### Playful
-
-Bouncy rhythms, plucks, quirky percussion, brighter motion.
-
-### Epic
-
-Cinematic drums, large pads, reverb, cosmic scale.
-
-Later moods:
-
-- Lo-fi;
-- Glitch;
-- Ambient.
-
----
-
-## Recommended project structure
-
-```text
-src/
-  app/
-  audio/
-  components/
-  data/
-  github/
-  mappings/
-  moods/
-  state/
-  types/
-  visuals/
-docs/
-  HLD.md
-  PROJECT_PLAN.md
-  STYLE_GUIDE.md
-  AGENT_GUIDE.md
-  DATA_AND_MAPPING_SPEC.md
-  ROADMAP.md
-  CONTRIBUTING.md
-```
-
----
-
-## Getting started
+## Local setup
 
 ```bash
 npm install
 npm run dev
 ```
 
-Build:
+## Scripts
 
 ```bash
+npm run dev
 npm run build
-```
-
-Typecheck:
-
-```bash
-npm run typecheck
-```
-
-Lint:
-
-```bash
+npm run preview
 npm run lint
+npm run format
+npm run format:check
+npm run typecheck
+npm run test
+npm run test:watch
 ```
 
----
+## Git hooks
 
-## Documentation
+Husky hooks are configured:
 
-Recommended repo docs:
+- **pre-commit**: runs `lint-staged`;
+- **pre-push**: runs `npm run typecheck`, `npm run test`, `npm run build`.
 
-- `docs/HLD.md` — high-level design
-- `docs/PROJECT_PLAN.md` — phased delivery plan
-- `docs/DATA_AND_MAPPING_SPEC.md` — data model and GitHub-to-audio mapping
-- `docs/STYLE_GUIDE.md` — design, UI, audio, and code style
-- `docs/AGENT_GUIDE.md` — how to brief coding agents safely
-- `docs/ROADMAP.md` — future direction
-- `docs/CONTRIBUTING.md` — contribution rules
+## CI summary
 
----
+Workflow: `.github/workflows/ci.yml`
 
-## Open-source intent
+Runs on pushes and pull requests to `main`:
 
-GitPulse is intended as an open-source showcase project.
+1. `npm ci`
+2. `npm run lint`
+3. `npm run format:check`
+4. `npm run typecheck`
+5. `npm run test`
+6. `npm run build`
 
-It should demonstrate creative technical execution across:
+## Version tagging workflow
 
-- frontend engineering;
-- data modelling;
-- generative audio;
-- 3D visualisation;
-- product design;
-- clean repo documentation.
+Workflow: `.github/workflows/version-tag.yml`
 
-Recommended licence:
+On pushes to `main`, the workflow:
 
-```text
-MIT
+- attempts to find merged PR labels (`release:major`, `release:minor`, `release:patch`);
+- defaults to `patch` when no release label is found;
+- reads latest tag in `version-X.Y.Z` format;
+- creates and pushes the next semantic tag.
+
+Tag examples:
+
+- `version-0.1.0`
+- `version-0.1.1`
+- `version-0.2.0`
+- `version-1.0.0`
+
+## GitHub Pages preparation
+
+Vite is configured with:
+
+```ts
+base: '/GitPulse/'
 ```
 
----
+This matches repository-name deployment on GitHub Pages.
 
-## Project status
+> Note: deployment automation is intentionally deferred to a later stage.
 
-Early design stage.
+## Project docs
 
-The first milestone is to build a deployable MVP that proves:
+Existing planning/design docs are preserved at repository root:
 
-> GitHub activity can become a cool, listenable, reactive audio-visual experience.
+- `HLD.md`
+- `PROJECT_PLAN.md`
+- `ROADMAP.md`
+- `STYLE_GUIDE.md`
+- `DATA_AND_MAPPING_SPEC.md`
+- `AGENT_GUIDE.md`
+- `AGENT_FOUNDATION_PROMPT.md`
+- `CONTRIBUTING.md`
+
+## Roadmap (high level)
+
+- **Stage 1**: Foundation shell ✅
+- **Stage 2**: GitHub ingestion and normalization
+- **Stage 3**: Multi-account merge logic
+- **Stage 4**: Tone.js audio MVP
+- **Stage 5**: React Three Fiber visual MVP
+- **Stage 6+**: Mood/audio mapping expansion, export/share, advanced creative features
+
+## Open-source positioning
+
+GitPulse is intended as an open-source playground and creative developer tool.
+Contributions, issue reports, and implementation ideas are welcome.
