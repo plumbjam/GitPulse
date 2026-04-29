@@ -7,6 +7,10 @@ import type {
   GitPulseRepo,
   GitPulseSummary,
 } from '@/domain/gitpulse.types'
+import {
+  createApproximateContributionCalendar,
+  mergeContributionCalendars,
+} from './githubContributionMerge'
 import { buildApproximateActivityDays } from './githubNormaliser'
 
 const ACTIVE_REPO_WINDOW_DAYS = 180
@@ -19,6 +23,7 @@ export function createEmptyGitPulseDataset(mode: GitPulseDatasetMode = 'demo'): 
     profileMode: 'single',
     repos: [],
     days: [],
+    contributionCalendar: undefined,
     summary: {
       totalIdentities: 0,
       successfulIdentities: 0,
@@ -58,6 +63,7 @@ export function mergeIdentityDatasets(
   const identities = identityDatasets.map((dataset) => dataset.identity)
   const mergedRepos = mergeRepos(identityDatasets.flatMap((dataset) => dataset.repos))
   const days = buildApproximateActivityDays(mergedRepos)
+  const contributionCalendar = buildContributionCalendar(identityDatasets)
   const summary = buildSummary(identities, mergedRepos, days)
 
   return {
@@ -65,6 +71,7 @@ export function mergeIdentityDatasets(
     profileMode: summary.successfulIdentities > 1 ? 'merged' : 'single',
     repos: mergedRepos,
     days,
+    contributionCalendar,
     summary,
     generatedAt: options.generatedAt ?? new Date().toISOString(),
     mode,
@@ -162,6 +169,22 @@ function buildSummary(
     consistencyScore: calculateConsistencyScore(days),
     burstinessScore: calculateBurstinessScore(days),
   }
+}
+
+function buildContributionCalendar(identityDatasets: GitPulseIdentityDataset[]) {
+  const contributionCalendars = identityDatasets
+    .filter((dataset) => dataset.identity.status === 'success')
+    .map(
+      (dataset) =>
+        dataset.contributionCalendar ??
+        createApproximateContributionCalendar(dataset.identity.username, dataset.days),
+    )
+
+  if (!contributionCalendars.length) {
+    return undefined
+  }
+
+  return mergeContributionCalendars(contributionCalendars)
 }
 
 function buildLanguageStats(repos: GitPulseRepo[]): GitPulseLanguageStat[] {

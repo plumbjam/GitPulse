@@ -60,3 +60,42 @@ export type GitHubIdentityFetchFailure = {
 }
 
 export type GitHubIdentityFetchResult = GitHubIdentityFetchSuccess | GitHubIdentityFetchFailure
+
+export type GitHubContributionCalendarDayResponse = {
+  date: string
+  contributionCount: number
+}
+
+export type GitHubContributionCalendarWeekResponse = {
+  contributionDays: GitHubContributionCalendarDayResponse[]
+}
+
+export type GitHubContributionCalendarResponse = {
+  totalContributions: number
+  weeks: GitHubContributionCalendarWeekResponse[]
+}
+
+export type GitHubContributionCalendarGraphqlResponse = {
+  data?: {
+    user: {
+      login: string
+      contributionsCollection: {
+        contributionCalendar: GitHubContributionCalendarResponse
+      }
+    } | null
+  }
+  errors?: Array<{
+    message: string
+    type?: string
+  }>
+}
+
+export type GitHubContributionCalendarQueryRange = {
+  from: string
+  to: string
+}
+
+export type GitHubContributionCalendarQueryResult = {
+  payload: GitHubContributionCalendarGraphqlResponse
+  range: GitHubContributionCalendarQueryRange
+}

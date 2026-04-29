@@ -13,39 +13,48 @@ Please preserve these principles:
 1. GitPulse should feel creative, musical, and visually distinctive.
 2. Multi-account merge support is a core feature.
 3. GitHub API responses should be normalized before use.
-4. Audio must only start after explicit user interaction.
-5. The app should work with public GitHub data and demo data.
-6. No secrets or tokens should be committed.
-7. MVP should remain frontend-first and easy to deploy.
+4. Contribution counts are creative timing signals, not forensic reporting.
+5. Audio must only start after explicit user interaction.
+6. The app should work with public GitHub data and demo data.
+7. No secrets or tokens should be committed.
+8. MVP should remain frontend-first and easy to deploy.
 
 ---
 
-## Stage 2 scope
+## Current scope
 
 The current completed stage is:
 
 ```text
-GitHub data ingestion + multi-account normalization
+Stage 3.2 - Playback refinement
 ```
 
-Stage 2 currently includes:
+This stage includes:
 
-- public GitHub REST fetching for profile, repositories, and repository languages;
-- dataset normalization into GitPulse domain types;
-- multi-account merge logic with `sourceUsernames` preservation;
-- approximate repo-push timeline generation;
-- demo fallback behavior;
-- insight and visualizer placeholder wiring to live dataset state.
+- public GitHub REST repo/language ingestion;
+- multi-account merged datasets;
+- optional GitHub GraphQL contribution calendar fetching;
+- demo and approximate contribution fallbacks;
+- merged contribution grid rendering;
+- deterministic Tone.js contribution sequencing;
+- full-range contribution playback with one day per audio step;
+- contribution-linked media bar under the grid with dynamic step counts and active step highlighting;
+- matching contribution grid tile glow while playback advances;
+- active tile auto-follow inside the scrollable contribution grid;
+- click-to-play transport controls with BPM, reset-to-mood-default, and volume;
+- Stage 2, 2.5, Stage 3 pure-function tests, and focused audio state/media UI tests.
 
-Stage 2 intentionally does not include:
+This stage intentionally does not include:
 
-- OAuth or token entry;
-- private repositories;
-- GraphQL contribution calendars;
-- true commit history;
-- Tone.js playback;
-- Three.js / React Three Fiber live scenes;
-- backend services or export flows.
+- OAuth or token persistence beyond runtime memory;
+- backend proxies;
+- private repo detail fetching;
+- downloaded sample packs;
+- AI audio generation;
+- audio export or MIDI export;
+- per-account audio layers;
+- live R3F scenes;
+- export or share flows.
 
 ---
 
@@ -75,22 +84,12 @@ npm run build
 
 ## Windows setup notes
 
-On Windows, the recommended baseline tools are:
+Recommended tools:
 
 - Git for Windows
 - Node.js LTS
 - npm
 - VS Code or another editor
-
-Using CMD with Winget:
-
-```cmd
-winget install --id Git.Git -e --source winget
-winget install --id OpenJS.NodeJS.LTS -e --source winget
-winget install --id Microsoft.VisualStudioCode -e --source winget
-```
-
-After installing Node or Git, close and reopen CMD so PATH updates are available.
 
 Check versions with:
 
@@ -100,7 +99,7 @@ node --version
 npm --version
 ```
 
-If `npm install` fails with registry or 403 errors, check and reset the npm registry:
+If `npm install` fails with registry issues, check and reset the npm registry:
 
 ```cmd
 npm config get registry
@@ -113,7 +112,7 @@ npm install
 
 ## Tooling gotchas
 
-### 1. Prettier check vs write script
+### 1. Prettier write vs check
 
 The repo uses:
 
@@ -124,7 +123,7 @@ The repo uses:
 }
 ```
 
-If `npm run format:check` reports style issues, run:
+If `npm run format:check` fails, run:
 
 ```bash
 npm run format
@@ -133,29 +132,25 @@ npm run format:check
 
 ### 2. Vitest config must use `vitest/config`
 
-If `npm run typecheck` reports that `test` does not exist in `vite.config.ts`, make sure `defineConfig` is imported from:
+Keep:
 
 ```ts
 import { defineConfig } from 'vitest/config'
 ```
 
-### 3. Vitest globals should be imported explicitly
+### 3. Import Vitest globals explicitly in tests
 
-Prefer explicit Vitest imports in tests:
+Prefer:
 
 ```ts
 import { describe, expect, it } from 'vitest'
 ```
 
-### 4. jsdom does not provide every browser API
+### 4. Preserve the jsdom `ResizeObserver` mock
 
-If tests fail with `ResizeObserver is not defined`, preserve the no-op mock in `src/test/setup.ts`.
+If UI tests fail with `ResizeObserver is not defined`, keep the no-op mock in `src/test/setup.ts`.
 
-### 5. Testing Library queries should stay specific
-
-Avoid broad text regexes that match multiple UI elements. Prefer precise text or semantic role queries.
-
-### 6. GitHub Pages base path
+### 5. GitHub Pages base path
 
 The app is prepared for GitHub Pages under:
 
@@ -163,30 +158,68 @@ The app is prepared for GitHub Pages under:
 /GitPulse/
 ```
 
-Avoid hardcoded absolute asset paths that would break repository-path deployments.
+Avoid hardcoded absolute asset paths that break repository-path deployments.
 
 ---
 
 ## GitHub data guidance
 
-Stage 2 GitHub data work should preserve these behaviors:
+### REST data
 
-- use public GitHub REST endpoints only;
-- do not add OAuth or token handling without discussion;
-- treat partial language-fetch failures as warnings, not total failure;
-- preserve successful accounts even when one identity fails;
-- deduplicate repositories carefully and preserve `sourceUsernames`;
-- keep language byte fetches capped to the most recently pushed 24 repos per identity;
-- keep demo fallback behavior working;
-- remember that the Stage 2 `days` timeline is an approximate repo-push timeline, not commit history.
+Stage 2 REST data work should preserve:
 
-User-facing errors should stay friendly:
+- public GitHub endpoints only;
+- partial language-fetch warnings instead of hard failure;
+- repo deduplication with preserved `sourceUsernames`;
+- demo fallback behavior;
+- no private repo access for MVP.
 
-- `User not found.`
-- `GitHub rate limit reached. Try again later.`
-- `Network error while contacting GitHub.`
-- `Could not load languages for some repositories.`
-- duplicate and invalid username validation messages
+### Contribution calendar data
+
+Stage 2.5 contribution calendar work should preserve:
+
+- GraphQL is optional and token-gated;
+- do not attempt GraphQL calendar fetches without a token;
+- token stays in memory only unless a future stage explicitly changes that;
+- do not log tokens;
+- do not store token values in source-controlled files;
+- if GraphQL contribution fetch fails, preserve the REST dataset and fall back to approximate contribution activity;
+- merged calendars must preserve `perIdentityCounts`, `sourceUsernames`, and date continuity.
+
+### Tone.js audio behavior
+
+Stage 3 audio work should preserve:
+
+- no autoplay;
+- `Tone.start()` only inside an explicit user-gesture path;
+- the merged contribution calendar as the primary rhythm source;
+- approximate fallback only from normalized in-memory data;
+- deterministic full-range contribution sequencing;
+- dynamic loop bars calculated from the contribution day count;
+- the media bar and Tone runtime sharing the same generated audio pattern;
+- active step callbacks scheduled through Tone's UI-safe draw path when available;
+- `Stop` resetting the visible media playhead to the first playable step;
+- mood default BPM unless the user has manually overridden BPM;
+- safe Play and Stop behavior without duplicate overlapping loops;
+- comfortably audible volume defaults and limiter-backed output;
+- pure audio mapping logic kept separate from the Tone runtime so tests can stay browser-independent.
+
+### Privacy rules
+
+- GitPulse must not infer private repository names, languages, or details from contribution counts.
+- Private or restricted contributions, if included by GitHub for a token and account settings, must be treated as anonymous count data only.
+- Contribution grids are timing and activity signals, not forensic reports.
+
+### Fallback behavior
+
+Keep these modes working:
+
+- `demo`
+- `graphql`
+- `approximate`
+- `mixed`
+
+The Stage 2 repo-push `days` array remains approximate and should stay clearly documented as such.
 
 ---
 
@@ -195,7 +228,8 @@ User-facing errors should stay friendly:
 Recommended folders:
 
 ```text
-src/github      GitHub API client, normalization, merge logic, fixtures, tests
+src/audio       Audio pattern mapping, sequencing, instruments, runtime engine, tests
+src/github      GitHub REST/GraphQL clients, normalization, merge logic, fixtures, tests
 src/data        Demo data
 src/domain      Shared dataset contracts
 src/store       Zustand state
@@ -204,7 +238,7 @@ src/app         App entry and providers
 src/test        Vitest setup
 ```
 
-Keep API fetching, normalization, merge logic, and UI wiring separate.
+Keep API fetching, normalization, merge logic, UI wiring, and Tone runtime behavior separate.
 
 ---
 
@@ -213,27 +247,28 @@ Keep API fetching, normalization, merge logic, and UI wiring separate.
 A good PR should include:
 
 - a clear summary;
-- screenshots or GIFs for visual changes;
+- screenshots or GIFs for UI changes;
 - tests where appropriate;
 - documentation updates when architecture changes.
 
 Please avoid:
 
 - broad unrelated refactors;
-- introducing backend services without discussion;
-- adding paid APIs as required dependencies;
-- removing demo fallback;
-- breaking multi-account source attribution.
+- backend services without discussion;
+- paid APIs as required dependencies;
+- removing demo or approximate fallbacks;
+- mixing Tone.js runtime objects into serializable Zustand dataset state;
+- adding AI audio or downloaded samples to the Stage 3 MVP without explicit scope approval;
+- breaking multi-account source attribution;
+- unsafe token handling.
 
-If a command cannot be run locally, state why in the PR notes.
+If a command cannot be run locally, note that in the PR summary.
 
 ---
 
 ## Git hooks, CI, and labels
 
-The repo uses Husky and lint-staged.
-
-Expected behavior:
+Expected checks:
 
 - pre-commit: staged formatting and lint checks;
 - pre-push: typecheck, tests, and build;
@@ -245,7 +280,7 @@ Release labels:
 - `release:minor`
 - `release:patch`
 
-Tags use the format:
+Tags use:
 
 ```text
 version-X.Y.Z
@@ -255,7 +290,7 @@ version-X.Y.Z
 
 ## Documentation
 
-If your change affects architecture or Stage 2 behavior, update the relevant docs:
+If your change affects architecture or Stage 3 behavior, update the relevant docs:
 
 - `README.md`
 - `CONTRIBUTING.md`
@@ -264,4 +299,4 @@ If your change affects architecture or Stage 2 behavior, update the relevant doc
 - `docs/DATA_AND_MAPPING_SPEC.md`
 - `docs/ROADMAP.md`
 
-Keep documentation practical, current, and aligned with the actual repository state.
+Keep documentation aligned with the real repository state rather than the intended future state.

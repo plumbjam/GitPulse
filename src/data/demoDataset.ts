@@ -1,8 +1,17 @@
-import type { GitPulseIdentityDataset, GitPulseRepo } from '@/domain/gitpulse.types'
-import { buildApproximateActivityDays } from '@/github/githubNormaliser'
+import type {
+  GitPulseContributionCalendar,
+  GitPulseIdentityDataset,
+  GitPulseRepo,
+} from '@/domain/gitpulse.types'
+import {
+  buildContributionCalendarFromSparseCounts,
+  enumerateContributionDates,
+  getDefaultContributionCalendarRange,
+} from '@/github/githubContributionMerge'
 import { mergeIdentityDatasets } from '@/github/githubMerge'
+import { buildApproximateActivityDays } from '@/github/githubNormaliser'
 
-const DEMO_GENERATED_AT = '2026-04-28T12:00:00.000Z'
+const DEMO_GENERATED_AT = '2026-04-29T12:00:00.000Z'
 
 function createDemoReposForSignal(): GitPulseRepo[] {
   return [
@@ -198,6 +207,8 @@ function createDemoReposForStudio(): GitPulseRepo[] {
 export function createDemoIdentityDatasets(): GitPulseIdentityDataset[] {
   const signalRepos = createDemoReposForSignal()
   const studioRepos = createDemoReposForStudio()
+  const signalContributionCalendar = createDemoContributionCalendar('signal-lab', 3)
+  const studioContributionCalendar = createDemoContributionCalendar('signal-studio', 11)
 
   return [
     {
@@ -212,6 +223,7 @@ export function createDemoIdentityDatasets(): GitPulseIdentityDataset[] {
       },
       repos: signalRepos,
       days: buildApproximateActivityDays(signalRepos),
+      contributionCalendar: signalContributionCalendar,
       mode: 'demo',
       warnings: [],
     },
@@ -227,6 +239,7 @@ export function createDemoIdentityDatasets(): GitPulseIdentityDataset[] {
       },
       repos: studioRepos,
       days: buildApproximateActivityDays(studioRepos),
+      contributionCalendar: studioContributionCalendar,
       mode: 'demo',
       warnings: [],
     },
@@ -237,3 +250,60 @@ export const demoDataset = mergeIdentityDatasets(createDemoIdentityDatasets(), {
   generatedAt: DEMO_GENERATED_AT,
   mode: 'demo',
 })
+
+function createDemoContributionCalendar(
+  username: string,
+  seed: number,
+): GitPulseContributionCalendar {
+  const range = getDefaultContributionCalendarRange(new Date(DEMO_GENERATED_AT))
+  const counts = enumerateContributionDates(range.from, range.to).reduce<Record<string, number>>(
+    (calendarCounts, date, index) => {
+      const dayOfWeek = getUtcDayOfWeek(date)
+      const month = getUtcMonth(date)
+      let contributionCount = 0
+
+      if (dayOfWeek > 0 && dayOfWeek < 6 && (index + seed) % 5 === 0) {
+        contributionCount += 1 + ((index + seed) % 3)
+      }
+
+      if ((index + seed) % 29 === 0) {
+        contributionCount += 5
+      }
+
+      if ((index + seed) % 71 === 0) {
+        contributionCount += 10
+      }
+
+      if (month === 11 && dayOfWeek === 2) {
+        contributionCount += 4
+      }
+
+      if (month === 7 && (index + seed) % 11 === 0) {
+        contributionCount = 0
+      }
+
+      if (contributionCount > 0) {
+        calendarCounts[date] = contributionCount
+      }
+
+      return calendarCounts
+    },
+    {},
+  )
+
+  return buildContributionCalendarFromSparseCounts({
+    username,
+    counts,
+    from: range.from,
+    to: range.to,
+    dataSource: 'demo',
+  })
+}
+
+function getUtcDayOfWeek(date: string) {
+  return new Date(`${date}T00:00:00.000Z`).getUTCDay()
+}
+
+function getUtcMonth(date: string) {
+  return new Date(`${date}T00:00:00.000Z`).getUTCMonth()
+}

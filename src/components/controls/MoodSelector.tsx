@@ -1,3 +1,4 @@
+import { getMoodAudioConfig } from '@/audio/moods'
 import { MOOD_OPTIONS } from '@/domain/mood.types'
 import { useGitPulseStore } from '@/store/useGitPulseStore'
 import { Button } from '@/components/ui/button'
@@ -21,10 +22,17 @@ export function MoodSelector() {
             <span className="text-left">
               <span className="block text-sm">{option.label}</span>
               <span className="block text-xs opacity-80">{option.description}</span>
+              <span className="block pt-1 text-[11px] opacity-70">
+                Default BPM: {getMoodAudioConfig(option.value).defaultBpm}
+              </span>
             </span>
           </Button>
         ))}
       </div>
+      <p className="text-xs text-muted-foreground">
+        Stage 3 fully tunes Futuristic first. The other preset labels keep their default BPMs and
+        reuse the same synth engine for now.
+      </p>
     </Card>
   )
 }

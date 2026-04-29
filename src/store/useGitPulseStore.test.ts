@@ -1,0 +1,69 @@
+import { beforeEach, describe, expect, it } from 'vitest'
+import { DEFAULT_AUDIO_VOLUME, getMoodDefaultBpm } from '@/audio/moods'
+import { useGitPulseStore } from './useGitPulseStore'
+
+const initialStoreState = useGitPulseStore.getState()
+
+describe('useGitPulseStore audio state', () => {
+  beforeEach(() => {
+    useGitPulseStore.setState(initialStoreState, true)
+  })
+
+  it('starts with the Futuristic mood default tempo and comfortable volume', () => {
+    const state = useGitPulseStore.getState()
+
+    expect(state.mood).toBe('futuristic')
+    expect(state.tempo).toBe(getMoodDefaultBpm('futuristic'))
+    expect(state.hasUserTempoOverride).toBe(false)
+    expect(state.volume).toBe(DEFAULT_AUDIO_VOLUME)
+  })
+
+  it('applies the next mood default tempo when the user has not overridden BPM', () => {
+    useGitPulseStore.getState().setMood('playful')
+
+    const state = useGitPulseStore.getState()
+
+    expect(state.mood).toBe('playful')
+    expect(state.tempo).toBe(getMoodDefaultBpm('playful'))
+    expect(state.hasUserTempoOverride).toBe(false)
+  })
+
+  it('preserves user BPM when mood changes after a manual tempo override', () => {
+    useGitPulseStore.getState().setTempo(142)
+    useGitPulseStore.getState().setMood('ambient')
+
+    const state = useGitPulseStore.getState()
+
+    expect(state.mood).toBe('ambient')
+    expect(state.tempo).toBe(142)
+    expect(state.hasUserTempoOverride).toBe(true)
+  })
+
+  it('resets tempo to the current mood default and clears the override flag', () => {
+    useGitPulseStore.getState().setTempo(150)
+    useGitPulseStore.getState().setMood('lofi')
+    useGitPulseStore.getState().resetTempoToMoodDefault()
+
+    const state = useGitPulseStore.getState()
+
+    expect(state.mood).toBe('lofi')
+    expect(state.tempo).toBe(getMoodDefaultBpm('lofi'))
+    expect(state.hasUserTempoOverride).toBe(false)
+  })
+
+  it('tracks and resets the active audio step', () => {
+    useGitPulseStore.getState().setActiveAudioStep(12, '2026-04-29')
+
+    expect(useGitPulseStore.getState()).toMatchObject({
+      activeAudioStepIndex: 12,
+      activeAudioDate: '2026-04-29',
+    })
+
+    useGitPulseStore.getState().resetActiveAudioStep()
+
+    expect(useGitPulseStore.getState()).toMatchObject({
+      activeAudioStepIndex: null,
+      activeAudioDate: undefined,
+    })
+  })
+})

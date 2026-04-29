@@ -5,6 +5,16 @@ export function InsightPanel() {
   const mood = useGitPulseStore((state) => state.mood)
   const dataset = useGitPulseStore((state) => state.dataset)
   const isFetching = useGitPulseStore((state) => state.isFetching)
+  const contributionCalendar = dataset.contributionCalendar
+  const peakContributionDay = contributionCalendar
+    ? contributionCalendar.days.reduce(
+        (peakDay, day) =>
+          !peakDay || day.contributionCount > peakDay.contributionCount ? day : peakDay,
+        contributionCalendar.days[0],
+      )
+    : undefined
+  const activeContributionDays =
+    contributionCalendar?.days.filter((day) => day.contributionCount > 0).length ?? 0
 
   const insightRows = [
     { label: 'Mode', value: dataset.mode },
@@ -31,7 +41,41 @@ export function InsightPanel() {
         ? formatDisplayDate(dataset.summary.mostRecentPushAt)
         : 'Awaiting data',
     },
+    {
+      label: 'Total contributions',
+      value: contributionCalendar
+        ? contributionCalendar.totalContributions.toString()
+        : 'Awaiting grid',
+    },
+    {
+      label: 'Contribution source',
+      value: contributionCalendar ? contributionCalendar.dataSource : 'Awaiting grid',
+    },
+    {
+      label: 'Audio source',
+      value: contributionCalendar ? 'Contribution calendar' : 'Approximate activity fallback',
+    },
+    {
+      label: 'Contribution range',
+      value: contributionCalendar
+        ? `${formatDisplayDate(contributionCalendar.from)} - ${formatDisplayDate(
+            contributionCalendar.to,
+          )}`
+        : 'Awaiting grid',
+    },
+    {
+      label: 'Peak contribution day',
+      value:
+        peakContributionDay && peakContributionDay.contributionCount > 0
+          ? `${formatDisplayDate(peakContributionDay.date)} (${peakContributionDay.contributionCount})`
+          : 'Awaiting grid',
+    },
+    {
+      label: 'Active contribution days',
+      value: contributionCalendar ? activeContributionDays.toString() : 'Awaiting grid',
+    },
     { label: 'Activity score', value: dataset.summary.activityScore.toString() },
+    { label: 'Audio loop', value: '16 bars' },
     { label: 'Mood', value: mood },
   ]
 

@@ -10,6 +10,7 @@ export function VisualiserStage() {
   const barCount = clamp(totalRepos || 12, 8, 24)
   const activityScore = dataset.summary.activityScore
   const dominantLanguages = dataset.summary.dominantLanguages.slice(0, 3)
+  const contributionCalendar = dataset.contributionCalendar
 
   return (
     <Card className="relative min-h-[320px] overflow-hidden p-6 md:min-h-[420px]">
@@ -28,7 +29,8 @@ export function VisualiserStage() {
           <div>
             <p className="font-medium">Visualiser placeholder</p>
             <p className="text-xs text-cyan-100/80">
-              Wired to Stage 2 summary data while the full scene remains in a later pass.
+              Contribution calendar data now drives the Stage 3 audio loop while the full visual
+              scene remains in a later pass.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs text-cyan-100/90 md:text-sm">
@@ -43,6 +45,12 @@ export function VisualiserStage() {
             </div>
             <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
               {dominantLanguages.length ? dominantLanguages.join(' / ') : 'Awaiting languages'}
+            </div>
+            <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2 capitalize">
+              Audio source: {contributionCalendar ? 'contribution calendar' : 'activity fallback'}
+            </div>
+            <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
+              Timeline: {contributionCalendar?.dataSource ?? 'approximate'}
             </div>
           </div>
         </div>

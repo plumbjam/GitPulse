@@ -1,9 +1,11 @@
 export type GitHubClientErrorCode =
   | 'invalid_username'
+  | 'missing_token'
   | 'not_found'
   | 'rate_limited'
   | 'network_error'
   | 'http_error'
+  | 'graphql_error'
 
 type GitHubClientErrorOptions = {
   code: GitHubClientErrorCode
@@ -38,12 +40,16 @@ export function createGitHubClientErrorMessage(error: {
   switch (error.code) {
     case 'invalid_username':
       return 'Enter a valid GitHub username.'
+    case 'missing_token':
+      return 'Add a GitHub token to fetch contribution calendars.'
     case 'not_found':
       return 'User not found.'
     case 'rate_limited':
       return 'GitHub rate limit reached. Try again later.'
     case 'network_error':
       return 'Network error while contacting GitHub.'
+    case 'graphql_error':
+      return 'GitHub contribution calendar query failed.'
     case 'http_error':
     default:
       if (error.status) {

@@ -2,47 +2,62 @@
 
 ## 1. Purpose
 
-This document defines the normalized Stage 2 GitPulse dataset and the rules that transform public GitHub REST data into that shape.
+This document defines the normalized GitPulse dataset and the rules that transform GitHub REST and GraphQL contribution data into that shape.
 
 The core rule is:
 
 > UI, audio, and visuals should use normalized GitPulse data, not raw GitHub API responses.
 
-Stage 2 is intentionally focused on data plumbing and UI wiring. It does not yet include true commit history, audio playback, or a live 3D scene.
+Stage 2.5 adds a merged contribution-calendar layer, and Stage 3.2 now uses that merged calendar as the full-range timing source for both the playable audio engine and the contribution media bar.
 
 ---
 
-## 2. Stage 2 pipeline
+## 2. Data pipeline
 
 ```text
-GitHub REST API responses
+GitHub REST profile/repo/language responses
   ->
-GitHub client
+REST normalization
   ->
-per-identity normalization
+per-identity repo datasets
   ->
 multi-account merge
   ->
 GitPulseDataset
+
+Optional GitHub GraphQL contribution calendar
   ->
-future audio and visual mapping stages
+calendar normalization
+  ->
+per-identity contribution calendars
+  ->
+calendar merge
+  ->
+GitPulseDataset.contributionCalendar
+  ->
+Stage 3 audio pattern generation
 ```
 
-Current source files:
+Current source areas:
 
 ```text
 src/github/githubClient.ts
 src/github/githubNormaliser.ts
 src/github/githubMerge.ts
-src/github/github.types.ts
-src/github/githubErrors.ts
+src/github/githubGraphqlClient.ts
+src/github/githubContributionNormaliser.ts
+src/github/githubContributionMerge.ts
+src/audio/contributionSequencer.ts
+src/audio/musicMapping.ts
+src/audio/useAudioPattern.ts
+src/audio/audioEngine.ts
 ```
 
 ---
 
-## 3. Public GitHub scope
+## 3. GitHub API scope
 
-Stage 2 uses public GitHub REST endpoints only:
+### Public REST endpoints
 
 ```text
 GET https://api.github.com/users/{username}
@@ -53,84 +68,52 @@ GET https://api.github.com/repos/{owner}/{repo}/languages
 Constraints:
 
 - public data only;
-- no OAuth or token handling;
-- no private repositories;
-- no GraphQL contribution calendar;
-- language byte fetches are capped to the most recently pushed 24 repositories per identity;
-- repo lists can still include repositories beyond that cap, but those repos fall back to GitHub's repo-level `language` field when byte-level language data is unavailable.
+- no OAuth in Stage 3;
+- no private repo detail access;
+- language byte fetches capped to the most recently pushed 24 repos per identity.
 
-Because Stage 2 is unauthenticated, GitHub rate limits must be handled gracefully.
+### Optional GraphQL contribution calendar
+
+```text
+POST https://api.github.com/graphql
+```
+
+Used for:
+
+- classic GitHub-style contribution-calendar day counts;
+- merged daily activity timeline;
+- primary audio timing source.
+
+Constraints:
+
+- requires a user-provided token;
+- do not attempt this query without a token;
+- token is runtime-only in memory;
+- contribution data may include anonymous private counts if GitHub provides them, but GitPulse must not infer private repo details.
 
 ---
 
 ## 4. Runtime dataset contract
 
-Stage 2 currently targets this normalized dataset shape:
-
 ```ts
-export type GitPulseIdentity = {
-  id: string
-  username: string
-  displayName?: string
-  avatarUrl?: string
-  profileUrl?: string
-  source: 'github'
-  role?: 'personal' | 'work' | 'other'
-  status?: 'idle' | 'loading' | 'success' | 'error'
-  errorMessage?: string
-  warningMessage?: string
-}
+export type GitPulseContributionDataSource = 'demo' | 'graphql' | 'approximate' | 'mixed'
 
-export type GitPulseRepo = {
-  id: string
-  githubId?: number
-  name: string
-  fullName: string
-  owner: string
-  url: string
-  description?: string
-  primaryLanguage?: string
-  languages: Record<string, number>
-  stars: number
-  forks: number
-  openIssues?: number
-  createdAt: string
-  updatedAt: string
-  pushedAt: string
-  isFork: boolean
-  isArchived?: boolean
-  sourceUsernames: string[]
-}
-
-export type GitPulseLanguageStat = {
-  name: string
-  bytes: number
-  repoCount: number
-  sourceUsernames: string[]
-}
-
-export type GitPulseActivityDay = {
+export type GitPulseContributionDay = {
   date: string
-  activityScore: number
-  repoTouches: string[]
+  contributionCount: number
+  intensity: 0 | 1 | 2 | 3 | 4
   sourceUsernames: string[]
+  perIdentityCounts: Record<string, number>
+  dataSource: GitPulseContributionDataSource
 }
 
-export type GitPulseSummary = {
-  totalIdentities: number
-  successfulIdentities: number
-  failedIdentities: number
-  totalRepos: number
-  activeRepos: number
-  dormantRepos: number
-  totalStars: number
-  totalForks: number
-  dominantLanguages: string[]
-  languageStats: GitPulseLanguageStat[]
-  mostRecentPushAt?: string
-  activityScore: number
-  consistencyScore?: number
-  burstinessScore?: number
+export type GitPulseContributionCalendar = {
+  from: string
+  to: string
+  totalContributions: number
+  days: GitPulseContributionDay[]
+  sourceUsernames: string[]
+  dataSource: GitPulseContributionDataSource
 }
 
 export type GitPulseDataset = {
@@ -138,19 +121,21 @@ export type GitPulseDataset = {
   profileMode: 'single' | 'merged'
   repos: GitPulseRepo[]
   days: GitPulseActivityDay[]
+  contributionCalendar?: GitPulseContributionCalendar
   summary: GitPulseSummary
   generatedAt: string
   mode: 'demo' | 'live'
 }
 ```
 
-Stage 2 also uses an internal per-identity container before merge:
+Internal per-identity container:
 
 ```ts
 export type GitPulseIdentityDataset = {
   identity: GitPulseIdentity
   repos: GitPulseRepo[]
   days: GitPulseActivityDay[]
+  contributionCalendar?: GitPulseContributionCalendar
   mode: 'demo' | 'live'
   warnings: string[]
 }
@@ -158,176 +143,272 @@ export type GitPulseIdentityDataset = {
 
 ---
 
-## 5. Normalization rules
+## 5. Data-source meanings
 
-Raw GitHub responses are normalized before they reach UI components.
+### `demo`
 
-Identity normalization:
+- fixed local fixture data for previews and fallback mode;
+- used when the user explicitly loads demo data.
 
-- `login` -> `username`
-- `name` -> `displayName`
-- `avatar_url` -> `avatarUrl`
-- `html_url` -> `profileUrl`
-- fetch outcome sets `status`
-- user-facing error and warning strings stay on the identity object
+### `graphql`
 
-Repository normalization:
+- real GitHub contribution calendar day counts fetched from GraphQL with a token.
 
-- `id` becomes `githubId` and part of the stable repo key;
-- `full_name` becomes `fullName`;
-- `owner.login` becomes `owner`;
-- `html_url` becomes `url`;
-- `stargazers_count`, `forks_count`, and `open_issues_count` populate repo summary fields;
-- `created_at`, `updated_at`, and `pushed_at` are normalized to ISO strings;
-- `languages` stays as `Record<string, number>`;
-- `primaryLanguage` is derived from language byte totals when available and falls back to GitHub's repo-level `language` field when needed.
+### `approximate`
 
-Language-fetch failures:
+- contribution-like day counts derived from the Stage 2 repo-push activity timeline;
+- used when no GraphQL token is available or GraphQL data is unavailable.
 
-- do not fail the entire identity;
-- produce an empty `languages` object for that repo;
-- keep repo metadata;
-- surface a friendly warning such as `Could not load languages for some repositories.`
+### `mixed`
+
+- merged output containing a blend of `graphql`, `approximate`, and/or `demo` contribution sources across identities.
 
 ---
 
-## 6. Merge rules
+## 6. REST normalization rules
 
-Multi-account merge is a first-class Stage 2 feature.
+REST normalization remains unchanged from Stage 2:
 
-Rules:
+- normalize identity profile fields;
+- normalize repo metadata and dates;
+- normalize language maps;
+- preserve `sourceUsernames`;
+- keep repo-push `days` as approximate repo activity, not commit history.
 
-1. Combine all identities into one `GitPulseDataset`.
-2. Preserve failed identities with `status: 'error'` and `errorMessage`.
-3. Only successful identities contribute repos and activity days.
-4. Deduplicate repositories by GitHub numeric repo ID when available, otherwise by lowercased `fullName`.
-5. Preserve and merge `sourceUsernames`.
-6. Keep the freshest `pushedAt` for duplicate repos.
-7. Keep the strongest repo metadata when duplicates disagree, such as higher stars or forks.
-8. Merge per-repo language maps without double counting the same repo twice.
-9. Recalculate summary metrics from the merged repo set.
-10. Set `profileMode` to `merged` when more than one identity succeeds, otherwise `single`.
+Those `days` remain useful as fallback contribution input when GraphQL data is unavailable.
+
+---
+
+## 7. Contribution-calendar normalization rules
+
+GraphQL contribution-calendar normalization rules:
+
+1. Flatten `weeks[].contributionDays[]`.
+2. Normalize dates to `YYYY-MM-DD`.
+3. Create one `GitPulseContributionDay` per day.
+4. Set `contributionCount`.
+5. Set `perIdentityCounts[username]`.
+6. Set `sourceUsernames` to the contributing identity list for that calendar.
+7. Calculate `intensity`.
+8. Set `dataSource` to `graphql`.
+9. Preserve `from`, `to`, and `totalContributions`.
+
+If GraphQL returns `user: null`, return a friendly `User not found.` result.
+
+---
+
+## 8. Intensity calculation
+
+Contribution intensity is intentionally simple and deterministic:
+
+```text
+0 contributions -> 0
+1 contribution  -> 1
+2-4             -> 2
+5-9             -> 3
+10+             -> 4
+```
+
+This is shared between GraphQL normalization, fallback generation, grid rendering, and Stage 3 audio mapping.
+
+---
+
+## 9. Approximate contribution fallback
+
+When no GraphQL calendar is available, GitPulse derives an approximate contribution calendar from the Stage 2 repo-push `days` signal.
 
 Important caveat:
 
-- language totals should not double count the same repo just because that repo appears in multiple identities.
+- this is not commit history;
+- this is not a GitHub contribution graph clone with exact counts;
+- it is a tokenless timing fallback derived from repo activity.
+
+Use cases:
+
+- live mode without a token;
+- live mode when GraphQL fetch fails;
+- mixed mode where some identities have GraphQL data and others do not;
+- Stage 3 audio sequencing when a normalized merged calendar is unavailable.
 
 ---
 
-## 7. Summary metrics
+## 10. Calendar merge rules
 
-Stage 2 calculates lightweight creative-signal metrics, not precise analytics.
+Merged contribution calendars must:
 
-Required metrics:
-
-- `totalIdentities`
-- `successfulIdentities`
-- `failedIdentities`
-- `totalRepos`
-- `activeRepos`
-- `dormantRepos`
-- `totalStars`
-- `totalForks`
-- `dominantLanguages`
-- `languageStats`
-- `mostRecentPushAt`
-- `activityScore`
-
-Current guidance:
-
-- `activeRepos`: pushed within the last 180 days
-- `dormantRepos`: not pushed within the last 365 days
-- `activityScore`: approximate 0-100 blend of recency, active repo breadth, and repo traction
-- `consistencyScore`: approximate density of active days across the observed timeline
-- `burstinessScore`: approximate peak-vs-average variation across active days
-
-These values are intended to drive future audio and visual mappings.
+1. merge by date;
+2. sum `contributionCount`;
+3. merge `perIdentityCounts`;
+4. merge and deduplicate `sourceUsernames`;
+5. recalculate `intensity`;
+6. preserve all dates across the merged range;
+7. fill missing days with zero-count entries for continuity;
+8. determine merged `dataSource`:
+   - `demo` if all calendars are demo
+   - `graphql` if all calendars are graphql
+   - `approximate` if all calendars are approximate
+   - `mixed` otherwise
+9. recalculate `totalContributions` from merged days;
+10. avoid double counting the same identity calendar twice.
 
 ---
 
-## 8. Approximate activity days
+## 11. Summary and UI implications
 
-Stage 2 does not have true commit-by-day data.
+Stage 2 repo summary metrics still exist and remain useful for:
 
-Instead, it builds an approximate `days` array from repository `pushedAt` dates:
+- repo node count;
+- dominant languages;
+- stars and forks;
+- overall creative energy.
 
-- one entry per pushed date;
-- `repoTouches` captures repos pushed on that date;
-- `sourceUsernames` preserves provenance;
-- `activityScore` is derived from touched repos plus simple repo traction.
+Stage 2.5 adds contribution summary signals such as:
 
-This is explicitly:
+- total contributions;
+- active contribution days;
+- contribution range;
+- peak contribution day;
+- contribution data source.
+
+The contribution grid and merged contribution calendar are now the primary rhythm and timing surface for Stage 3.
+
+---
+
+## 12. Demo dataset requirements
+
+Demo data should include:
+
+- at least two identities;
+- merged repos and merged contribution calendars;
+- quiet periods and contribution spikes;
+- visible multi-account overlap;
+- `dataSource: 'demo'`.
+
+The existing Stage 2 `Use demo data` flow should keep working without requiring a token.
+
+---
+
+## 13. Privacy and safety rules
+
+Contribution data must respect these rules:
+
+- do not infer private repo names or languages from private contribution counts;
+- do not expose token values in logs, errors, or committed files;
+- treat private or restricted contribution counts as anonymous activity only;
+- clearly distinguish repo-centric REST data from GraphQL contribution-calendar data and approximate fallback data.
+
+---
+
+## 14. Stage 3 audio mapping
+
+Stage 3 maps normalized contribution data into a deterministic Tone.js loop with these rules.
+
+### Primary source selection
+
+- use `GitPulseDataset.contributionCalendar.days` when available;
+- if no merged contribution calendar exists, fall back to normalized approximate activity data derived from `GitPulseDataset.days`;
+- do not make live GitHub API calls from the audio engine.
+
+### Timeline range
+
+- use the full contribution calendar range;
+- sort dates ascending before sequencing;
+- preserve zero-contribution days and fill missing dates inside the selected range with zero-contribution days;
+- map one contribution day to one sequencer step;
+- each bar contains 4 quarter-note steps, so each step represents one day.
+- calculate loop bars with `Math.ceil(stepCount / 4)`.
+
+### Playback visual alignment
+
+- `useAudioPattern` should provide the shared pattern used by playback UI and the Tone runtime;
+- the contribution media bar renders the same ordered steps that are passed to the audio engine;
+- the media bar playhead advances one step at a time through the scheduled `onStep` callback;
+- the main contribution grid may highlight the matching `date` while playback is active;
+- the active grid tile should be brought into view inside the scrollable contribution map while playback is active;
+- stopping playback resets the visible media bar to the first playable step and clears the active grid date.
+
+### Rhythm mapping
+
+Stage 3 uses the normalized `intensity` field directly:
 
 ```text
-approximate repo activity
+0 -> rest
+1 -> kick / pulse
+2 -> kick + hat
+3 -> kick + snare/clap + hat
+4 -> kick + snare/clap + hat + accent fill
 ```
 
-It is not a contribution graph and should be described that way in UI and docs.
+The mapping is deterministic for the same normalized dataset and mood settings.
+
+### Mood and tempo behavior
+
+- `Futuristic` is the fully tuned Stage 3 sound preset;
+- other mood labels may reuse the same engine for now;
+- Futuristic defaults to `118 BPM`;
+- documented future defaults are:
+  - Playful `126`
+  - Epic `92`
+  - Lo-fi `84`
+  - Glitch `132`
+  - Ambient `70`
+- BPM remains clamped to `60-160`;
+- mood changes apply their default BPM unless the user has manually changed BPM;
+- user BPM changes set the override flag and are preserved across mood changes;
+- resetting BPM restores the current mood default and clears the override flag.
+
+### Volume behavior
+
+- UI volume range is `0-100%`;
+- internal master gain is tuned so 50-60% app volume is comfortably audible;
+- Stage 3 uses a limiter-backed master path to keep 100% volume strong without harsh clipping;
+- near-silent output should still be possible at low slider values.
+
+### Browser audio safety
+
+- browsers require a user gesture before audio playback;
+- Stage 3 playback starts only after a `Play` click calls `Tone.start()`;
+- `Stop` must halt the transport, clear scheduled events, reset the media playhead, and avoid overlapping replay loops.
 
 ---
 
-## 9. Error handling
+## 15. Testing expectations
 
-Stage 2 should expose predictable, user-friendly error messages.
+Stage 2.5 tests should continue to cover:
 
-Expected examples:
+- intensity calculation;
+- GraphQL contribution normalization;
+- missing-user handling;
+- calendar merge logic;
+- preserved `perIdentityCounts`;
+- preserved `sourceUsernames`;
+- filled missing days;
+- `mixed` data-source determination;
+- total-contribution recalculation.
 
-- `Enter a valid GitHub username.`
-- `User not found.`
-- `GitHub rate limit reached. Try again later.`
-- `Network error while contacting GitHub.`
-- `Could not load languages for some repositories.`
+Stage 3 audio tests should cover:
 
-Duplicate usernames should be rejected before fetch to avoid unnecessary API calls.
+- using the full contribution calendar range;
+- filling missing dates inside a range with quiet steps;
+- sorting dates before sequencing;
+- intensity-to-rhythm mapping;
+- dynamic bar calculation from step count;
+- active-step and peak-count calculations;
+- mood default BPM behavior;
+- user BPM override behavior;
+- active audio step reset behavior;
+- media bar mapping from audio pattern steps to visible timeline segments.
 
----
-
-## 10. Demo dataset requirements
-
-Demo data exists so the Stage 2 shell remains useful without live fetches.
-
-The demo dataset should:
-
-- include at least two identities;
-- include multiple repositories and languages;
-- include recent and dormant repos;
-- preserve `sourceUsernames`;
-- demonstrate duplicate-repo merge behavior;
-- generate meaningful summary metrics and approximate activity days.
-
-Demo data should produce `mode: 'demo'`.
+Existing Stage 2 REST tests and the app smoke test should continue to pass.
 
 ---
 
-## 11. Testing expectations
+## 16. Known limitations
 
-Stage 2 data logic should remain easy to unit test without live API access.
+Current intentional limitations:
 
-Current required test coverage:
-
-- normalizing a GitHub profile;
-- normalizing repositories with language payloads;
-- handling missing language data;
-- merging two identities;
-- deduplicating duplicate repos;
-- preserving `sourceUsernames`;
-- preserving failed identity errors;
-- calculating summary metrics;
-- producing `single` vs `merged` profile mode correctly.
-
-The existing app smoke test should continue to pass alongside the Stage 2 unit tests.
-
----
-
-## 12. Future stages
-
-Stage 3 will map the normalized GitPulse dataset into a basic playable Tone.js loop.
-
-Later stages may add:
-
-- true contribution data via GraphQL or another approved source;
-- OAuth and private-repo support;
-- per-account layered audio modes;
-- richer visual systems in React Three Fiber;
-- export and share flows;
-- extended language, mood, and signal mappings.
+- no AI-generated audio;
+- no downloaded samples;
+- no per-account audio layers;
+- no export, recording, or MIDI output;
+- no live audio-reactive Three.js scene yet.
