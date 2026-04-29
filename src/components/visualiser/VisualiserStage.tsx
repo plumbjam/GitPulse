@@ -1,7 +1,16 @@
 import { motion } from 'framer-motion'
+import { useGitPulseStore } from '@/store/useGitPulseStore'
 import { Card } from '@/components/ui/card'
 
 export function VisualiserStage() {
+  const mood = useGitPulseStore((state) => state.mood)
+  const dataset = useGitPulseStore((state) => state.dataset)
+
+  const totalRepos = dataset.summary.totalRepos
+  const barCount = clamp(totalRepos || 12, 8, 24)
+  const activityScore = dataset.summary.activityScore
+  const dominantLanguages = dataset.summary.dominantLanguages.slice(0, 3)
+
   return (
     <Card className="relative min-h-[320px] overflow-hidden p-6 md:min-h-[420px]">
       <div
@@ -14,14 +23,39 @@ export function VisualiserStage() {
         transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         aria-hidden
       />
-      <div className="relative z-10 flex h-full flex-col justify-between">
-        <p className="text-sm text-cyan-100">Visualiser engine placeholder</p>
+      <div className="relative z-10 flex h-full flex-col justify-between gap-6">
+        <div className="flex flex-wrap items-start justify-between gap-3 text-sm text-cyan-100">
+          <div>
+            <p className="font-medium">Visualiser placeholder</p>
+            <p className="text-xs text-cyan-100/80">
+              Wired to Stage 2 summary data while the full scene remains in a later pass.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs text-cyan-100/90 md:text-sm">
+            <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
+              Repo nodes: {totalRepos}
+            </div>
+            <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2 capitalize">
+              Mood: {mood}
+            </div>
+            <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
+              Activity: {activityScore}
+            </div>
+            <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
+              {dominantLanguages.length ? dominantLanguages.join(' / ') : 'Awaiting languages'}
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-12 gap-2">
-          {Array.from({ length: 24 }).map((_, index) => (
+          {Array.from({ length: barCount }).map((_, index) => (
             <motion.span
               key={index}
               className="col-span-1 rounded-sm bg-cyan-200/70"
-              animate={{ height: [8, 40 + (index % 6) * 10, 10] }}
+              animate={{
+                height: [12, 32 + Math.round(activityScore / 3) + (index % 6) * 8, 16],
+                opacity: [0.55, 0.95, 0.6],
+              }}
               transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.04 }}
             />
           ))}
@@ -29,4 +63,8 @@ export function VisualiserStage() {
       </div>
     </Card>
   )
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
 }

@@ -2,32 +2,61 @@
 
 > Your GitHub activity has a sound.
 
-GitPulse is an open-source creative web app that turns one or more GitHub identities into a future audio-visual coding signature.
+GitPulse is an open-source creative web app that turns one or more public GitHub identities into a personalized audio-visual coding signature.
 
-## Stage 1 status (Application Foundation)
+## Stage 2 status
 
-Stage 1 is complete as a polished **foundation shell**.
+Stage 2 is complete as the GitHub data ingestion and multi-account normalization layer.
 
 Implemented in this stage:
 
-- React + Vite + TypeScript app foundation;
-- futuristic dark UI shell and visual identity;
-- multi-account merged identity input placeholders;
-- mood selector placeholders;
-- transport (playback) placeholder controls;
-- visualiser stage placeholder animations;
-- typed domain model and initial Zustand store;
-- Tailwind + shadcn/ui-style component foundation;
-- Vitest + React Testing Library smoke test;
-- ESLint + Prettier + Husky + lint-staged quality gates;
-- GitHub Actions CI and semantic version tag workflow prep.
+- public GitHub username input with duplicate and invalid-name handling;
+- public GitHub REST fetching for profile, repositories, and repository languages;
+- per-identity loading, success, and error state;
+- multi-account dataset merge with repo deduplication and `sourceUsernames` attribution;
+- summary metrics for repos, languages, stars, forks, recency, and activity score;
+- approximate repo-push timeline for future audio and visual stages;
+- demo dataset fallback;
+- insight and visualizer placeholder wiring against real dataset state;
+- unit tests for normalization and merge logic.
 
 Not implemented yet:
 
-- live GitHub API data ingestion;
-- audio generation/playback with Tone.js;
-- real Three.js / React Three Fiber visualisation engine;
-- backend, auth, exports, deployment pipeline.
+- GitHub OAuth or token handling;
+- private repository access;
+- GitHub GraphQL contribution calendar;
+- true commit-by-day history;
+- Tone.js playback engine;
+- Three.js / React Three Fiber live scene;
+- backend services, export, or AI features.
+
+## Public GitHub data scope
+
+GitPulse Stage 2 uses public GitHub REST endpoints only:
+
+- `GET https://api.github.com/users/{username}`
+- `GET https://api.github.com/users/{username}/repos?per_page=100&sort=pushed`
+- `GET https://api.github.com/repos/{owner}/{repo}/languages`
+
+No authentication is required for the MVP flow. That also means GitHub's unauthenticated rate limits apply.
+
+Repository language fetches are intentionally capped to the most recently pushed 24 repositories per identity. Remaining repositories still appear in the normalized dataset, but they fall back to GitHub's repo-level primary language when byte-level language data is unavailable.
+
+## Multi-account merge behavior
+
+GitPulse Stage 2 treats multi-account merge as a first-class concept.
+
+- successful identities are merged into one normalized dataset;
+- failed identities are preserved with status and error messages;
+- repositories are deduplicated by GitHub repo ID when available, then by lowercased `owner/name`;
+- duplicate repos preserve merged `sourceUsernames` and keep the freshest `pushedAt`;
+- summary metrics are recalculated from the merged repo set rather than per-account totals.
+
+## Activity timeline caveat
+
+Stage 2 does not fetch true commit history yet.
+
+The `days` array is an approximate activity timeline built from repository `pushedAt` dates. It is intended as a creative signal input for future audio and visual stages, not as precise analytics.
 
 ## Stack
 
@@ -40,13 +69,16 @@ Not implemented yet:
 - lucide-react
 - framer-motion
 - zustand
-- Tone.js _(installed, not yet used for playback)_
-- three _(installed, visual engine pending)_
-- @react-three/fiber _(installed, scene pending)_
-- @react-three/drei _(installed, scene pending)_
 - Vitest + React Testing Library
 - ESLint + Prettier
 - Husky + lint-staged
+
+Installed for future stages, not yet active in Stage 2:
+
+- Tone.js
+- three
+- @react-three/fiber
+- @react-three/drei
 
 ## Local setup
 
@@ -55,57 +87,16 @@ npm install
 npm run dev
 ```
 
-## Scripts
+## Quality commands
 
 ```bash
-npm run dev
-npm run build
-npm run preview
-npm run lint
 npm run format
+npm run lint
 npm run format:check
 npm run typecheck
 npm run test
-npm run test:watch
+npm run build
 ```
-
-## Git hooks
-
-Husky hooks are configured:
-
-- **pre-commit**: runs `lint-staged`;
-- **pre-push**: runs `npm run typecheck`, `npm run test`, `npm run build`.
-
-## CI summary
-
-Workflow: `.github/workflows/ci.yml`
-
-Runs on pushes and pull requests to `main`:
-
-1. `npm ci`
-2. `npm run lint`
-3. `npm run format:check`
-4. `npm run typecheck`
-5. `npm run test`
-6. `npm run build`
-
-## Version tagging workflow
-
-Workflow: `.github/workflows/version-tag.yml`
-
-On pushes to `main`, the workflow:
-
-- attempts to find merged PR labels (`release:major`, `release:minor`, `release:patch`);
-- defaults to `patch` when no release label is found;
-- reads latest tag in `version-X.Y.Z` format;
-- creates and pushes the next semantic tag.
-
-Tag examples:
-
-- `version-0.1.0`
-- `version-0.1.1`
-- `version-0.2.0`
-- `version-1.0.0`
 
 ## GitHub Pages preparation
 
@@ -117,29 +108,25 @@ base: '/GitPulse/'
 
 This matches repository-name deployment on GitHub Pages.
 
-> Note: deployment automation is intentionally deferred to a later stage.
-
 ## Project docs
 
-Existing planning/design docs are preserved at repository root:
-
-- `HLD.md`
-- `PROJECT_PLAN.md`
-- `ROADMAP.md`
-- `STYLE_GUIDE.md`
-- `DATA_AND_MAPPING_SPEC.md`
-- `AGENT_GUIDE.md`
-- `AGENT_FOUNDATION_PROMPT.md`
+- `README.md`
 - `CONTRIBUTING.md`
+- `HLD.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ROADMAP.md`
+- `docs/STYLE_GUIDE.md`
+- `docs/DATA_AND_MAPPING_SPEC.md`
+- `docs/AGENT_GUIDE.md`
+- `docs/AGENT_FOUNDATION_PROMPT.md`
 
-## Roadmap (high level)
+## Roadmap
 
-- **Stage 1**: Foundation shell ✅
-- **Stage 2**: GitHub ingestion and normalization
-- **Stage 3**: Multi-account merge logic
-- **Stage 4**: Tone.js audio MVP
-- **Stage 5**: React Three Fiber visual MVP
-- **Stage 6+**: Mood/audio mapping expansion, export/share, advanced creative features
+- Stage 1: Foundation shell
+- Stage 2: GitHub ingestion and multi-account normalization
+- Stage 3: Tone.js audio engine MVP
+- Stage 4: React Three Fiber visual MVP
+- Stage 5+: Mapping expansion, export/share, and advanced creative features
 
 ## Open-source positioning
 

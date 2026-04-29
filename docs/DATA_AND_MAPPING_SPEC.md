@@ -1,508 +1,333 @@
-# GitPulse — Data and Mapping Specification
+# GitPulse Data and Mapping Specification
 
 ## 1. Purpose
 
-This document defines how GitPulse should structure GitHub data internally and how that data should map to audio and visual behaviour.
+This document defines the normalized Stage 2 GitPulse dataset and the rules that transform public GitHub REST data into that shape.
 
-The key rule is:
+The core rule is:
 
-> UI, audio, and visuals should use normalised GitPulse data, not raw GitHub API responses.
+> UI, audio, and visuals should use normalized GitPulse data, not raw GitHub API responses.
+
+Stage 2 is intentionally focused on data plumbing and UI wiring. It does not yet include true commit history, audio playback, or a live 3D scene.
 
 ---
 
-## 2. Data pipeline
-
-Recommended data flow:
+## 2. Stage 2 pipeline
 
 ```text
-GitHub API responses
-  ↓
+GitHub REST API responses
+  ->
 GitHub client
-  ↓
-per-account normalisation
-  ↓
+  ->
+per-identity normalization
+  ->
 multi-account merge
-  ↓
+  ->
 GitPulseDataset
-  ↓
-audio mapping + visual mapping
-  ↓
-Tone.js + React Three Fiber
+  ->
+future audio and visual mapping stages
+```
+
+Current source files:
+
+```text
+src/github/githubClient.ts
+src/github/githubNormaliser.ts
+src/github/githubMerge.ts
+src/github/github.types.ts
+src/github/githubErrors.ts
 ```
 
 ---
 
-## 3. Core types
+## 3. Public GitHub scope
 
-### 3.1 Merge mode
+Stage 2 uses public GitHub REST endpoints only:
 
-```ts
-export type GitPulseMergeMode = 'composite' | 'layered' | 'compare'
+```text
+GET https://api.github.com/users/{username}
+GET https://api.github.com/users/{username}/repos?per_page=100&sort=pushed
+GET https://api.github.com/repos/{owner}/{repo}/languages
 ```
 
-MVP uses:
+Constraints:
 
-```ts
-'composite'
-```
+- public data only;
+- no OAuth or token handling;
+- no private repositories;
+- no GraphQL contribution calendar;
+- language byte fetches are capped to the most recently pushed 24 repositories per identity;
+- repo lists can still include repositories beyond that cap, but those repos fall back to GitHub's repo-level `language` field when byte-level language data is unavailable.
+
+Because Stage 2 is unauthenticated, GitHub rate limits must be handled gracefully.
 
 ---
 
-### 3.2 Account
+## 4. Runtime dataset contract
+
+Stage 2 currently targets this normalized dataset shape:
 
 ```ts
-export type GitPulseAccount = {
+export type GitPulseIdentity = {
+  id: string
   username: string
   displayName?: string
   avatarUrl?: string
-  profileUrl: string
-  publicRepoCount?: number
+  profileUrl?: string
+  source: 'github'
+  role?: 'personal' | 'work' | 'other'
+  status?: 'idle' | 'loading' | 'success' | 'error'
+  errorMessage?: string
+  warningMessage?: string
 }
-```
 
----
-
-### 3.3 Repository
-
-```ts
 export type GitPulseRepo = {
   id: string
-  canonicalName: string // owner/name
-  owner: string
+  githubId?: number
   name: string
+  fullName: string
+  owner: string
   url: string
+  description?: string
   primaryLanguage?: string
   languages: Record<string, number>
   stars: number
   forks: number
+  openIssues?: number
   createdAt: string
+  updatedAt: string
   pushedAt: string
   isFork: boolean
+  isArchived?: boolean
   sourceUsernames: string[]
 }
-```
 
----
+export type GitPulseLanguageStat = {
+  name: string
+  bytes: number
+  repoCount: number
+  sourceUsernames: string[]
+}
 
-### 3.4 Activity day
-
-```ts
 export type GitPulseActivityDay = {
   date: string
-  commitCountApprox: number
-  issueCount?: number
-  pullRequestCount?: number
+  activityScore: number
   repoTouches: string[]
-  sourceBreakdown: Record<
-    string,
-    {
-      commitCountApprox: number
-      repoTouches: string[]
-    }
-  >
+  sourceUsernames: string[]
 }
-```
 
----
+export type GitPulseSummary = {
+  totalIdentities: number
+  successfulIdentities: number
+  failedIdentities: number
+  totalRepos: number
+  activeRepos: number
+  dormantRepos: number
+  totalStars: number
+  totalForks: number
+  dominantLanguages: string[]
+  languageStats: GitPulseLanguageStat[]
+  mostRecentPushAt?: string
+  activityScore: number
+  consistencyScore?: number
+  burstinessScore?: number
+}
 
-### 3.5 Dataset
-
-```ts
 export type GitPulseDataset = {
-  accounts: GitPulseAccount[]
-  mergedIdentity: {
-    label: string
-    usernames: string[]
-    avatarUrls: string[]
-  }
+  identities: GitPulseIdentity[]
+  profileMode: 'single' | 'merged'
   repos: GitPulseRepo[]
   days: GitPulseActivityDay[]
-  summary: {
-    totalRepos: number
-    activeRepos: number
-    dominantLanguages: string[]
-    sourceUsernames: string[]
-    activityScore: number
-    consistencyScore: number
-    burstinessScore: number
-    mergeMode: GitPulseMergeMode
-  }
+  summary: GitPulseSummary
+  generatedAt: string
+  mode: 'demo' | 'live'
+}
+```
+
+Stage 2 also uses an internal per-identity container before merge:
+
+```ts
+export type GitPulseIdentityDataset = {
+  identity: GitPulseIdentity
+  repos: GitPulseRepo[]
+  days: GitPulseActivityDay[]
+  mode: 'demo' | 'live'
+  warnings: string[]
 }
 ```
 
 ---
 
-## 4. Multi-account merge specification
+## 5. Normalization rules
 
-### 4.1 Input
+Raw GitHub responses are normalized before they reach UI components.
 
-Multiple per-account datasets:
+Identity normalization:
 
-```text
-Dataset for @personal
-Dataset for @work
-Dataset for @legacy
-```
+- `login` -> `username`
+- `name` -> `displayName`
+- `avatar_url` -> `avatarUrl`
+- `html_url` -> `profileUrl`
+- fetch outcome sets `status`
+- user-facing error and warning strings stay on the identity object
 
-### 4.2 Output
+Repository normalization:
 
-One merged dataset:
+- `id` becomes `githubId` and part of the stable repo key;
+- `full_name` becomes `fullName`;
+- `owner.login` becomes `owner`;
+- `html_url` becomes `url`;
+- `stargazers_count`, `forks_count`, and `open_issues_count` populate repo summary fields;
+- `created_at`, `updated_at`, and `pushed_at` are normalized to ISO strings;
+- `languages` stays as `Record<string, number>`;
+- `primaryLanguage` is derived from language byte totals when available and falls back to GitHub's repo-level `language` field when needed.
 
-```text
-Composite GitPulseDataset
-```
+Language-fetch failures:
 
-### 4.3 Username parsing
+- do not fail the entire identity;
+- produce an empty `languages` object for that repo;
+- keep repo metadata;
+- surface a friendly warning such as `Could not load languages for some repositories.`
 
-Input should support:
+---
 
-```text
-ben
-ben, ben-work
-ben ben-work
-ben,ben-work, ben-lab
-```
+## 6. Merge rules
 
-Parsing rules:
-
-1. Split on commas and whitespace.
-2. Trim values.
-3. Remove empty values.
-4. Remove duplicates case-insensitively.
-5. Preserve display casing if possible.
-
-### 4.4 Repo deduplication
-
-Canonical repo identity:
-
-```text
-owner/name
-```
+Multi-account merge is a first-class Stage 2 feature.
 
 Rules:
 
-1. If two repos share the same canonical name, merge them.
-2. Preserve all `sourceUsernames`.
-3. Do not double count stars or forks for duplicate repos.
-4. Use the highest stars/forks values if duplicates differ.
-5. Use the most recent `pushedAt`.
-6. Merge languages by summing language byte counts.
+1. Combine all identities into one `GitPulseDataset`.
+2. Preserve failed identities with `status: 'error'` and `errorMessage`.
+3. Only successful identities contribute repos and activity days.
+4. Deduplicate repositories by GitHub numeric repo ID when available, otherwise by lowercased `fullName`.
+5. Preserve and merge `sourceUsernames`.
+6. Keep the freshest `pushedAt` for duplicate repos.
+7. Keep the strongest repo metadata when duplicates disagree, such as higher stars or forks.
+8. Merge per-repo language maps without double counting the same repo twice.
+9. Recalculate summary metrics from the merged repo set.
+10. Set `profileMode` to `merged` when more than one identity succeeds, otherwise `single`.
 
-### 4.5 Activity merge
+Important caveat:
 
-For each date:
-
-1. Sum approximate commit/activity counts.
-2. Merge repo touches.
-3. Deduplicate repo touches.
-4. Preserve per-account source breakdown.
-
-Example:
-
-```ts
-{
-  date: '2026-04-28',
-  commitCountApprox: 12,
-  repoTouches: ['alice/app', 'work/api'],
-  sourceBreakdown: {
-    alice: {
-      commitCountApprox: 5,
-      repoTouches: ['alice/app']
-    },
-    aliceWork: {
-      commitCountApprox: 7,
-      repoTouches: ['work/api']
-    }
-  }
-}
-```
+- language totals should not double count the same repo just because that repo appears in multiple identities.
 
 ---
 
-## 5. Activity scoring
+## 7. Summary metrics
 
-MVP scoring can be approximate.
+Stage 2 calculates lightweight creative-signal metrics, not precise analytics.
 
-### 5.1 Activity score
+Required metrics:
 
-Purpose:
+- `totalIdentities`
+- `successfulIdentities`
+- `failedIdentities`
+- `totalRepos`
+- `activeRepos`
+- `dormantRepos`
+- `totalStars`
+- `totalForks`
+- `dominantLanguages`
+- `languageStats`
+- `mostRecentPushAt`
+- `activityScore`
 
-- global energy of the track;
-- visual intensity;
-- baseline density.
+Current guidance:
 
-Possible calculation:
+- `activeRepos`: pushed within the last 180 days
+- `dormantRepos`: not pushed within the last 365 days
+- `activityScore`: approximate 0-100 blend of recency, active repo breadth, and repo traction
+- `consistencyScore`: approximate density of active days across the observed timeline
+- `burstinessScore`: approximate peak-vs-average variation across active days
+
+These values are intended to drive future audio and visual mappings.
+
+---
+
+## 8. Approximate activity days
+
+Stage 2 does not have true commit-by-day data.
+
+Instead, it builds an approximate `days` array from repository `pushedAt` dates:
+
+- one entry per pushed date;
+- `repoTouches` captures repos pushed on that date;
+- `sourceUsernames` preserves provenance;
+- `activityScore` is derived from touched repos plus simple repo traction.
+
+This is explicitly:
 
 ```text
-activityScore = normalised weighted blend of:
-- active repos
-- recent pushed dates
-- public event activity
-- approximate commit/activity days
+approximate repo activity
 ```
 
-### 5.2 Consistency score
-
-Purpose:
-
-- sustained pads;
-- smooth visual motion;
-- long arcs.
-
-Possible calculation:
-
-```text
-consistencyScore = proportion of active days in selected period
-```
-
-### 5.3 Burstiness score
-
-Purpose:
-
-- glitch intensity;
-- drum fills;
-- particle explosions;
-- dynamic spikes.
-
-Possible calculation:
-
-```text
-burstinessScore = variance of activity count per active day
-```
+It is not a contribution graph and should be described that way in UI and docs.
 
 ---
 
-## 6. Audio mapping specification
+## 9. Error handling
 
-### 6.1 Core mapping table
+Stage 2 should expose predictable, user-friendly error messages.
 
-| GitHub signal         | Audio mapping                         |
-| --------------------- | ------------------------------------- |
-| Activity/commit count | Drum density / pulse frequency        |
-| Repository            | Instrument layer / sequence lane      |
-| Primary language      | Instrument timbre / note palette      |
-| Language diversity    | Harmonic richness / stereo width      |
-| Stars                 | Reverb / brightness / sustain         |
-| Forks                 | Delay / echo repeats                  |
-| Recent activity       | Volume / filter brightness            |
-| Dormant repos         | Low-pass filter / quieter layer       |
-| Consistency score     | Pad sustain / smoother rhythm         |
-| Burstiness score      | Fills / accents / glitch bursts       |
-| Multiple accounts     | Composite, layered, or split channels |
+Expected examples:
+
+- `Enter a valid GitHub username.`
+- `User not found.`
+- `GitHub rate limit reached. Try again later.`
+- `Network error while contacting GitHub.`
+- `Could not load languages for some repositories.`
+
+Duplicate usernames should be rejected before fetch to avoid unnecessary API calls.
 
 ---
 
-### 6.2 Mood influence
+## 10. Demo dataset requirements
 
-Mood should alter the same data mapping.
+Demo data exists so the Stage 2 shell remains useful without live fetches.
 
-Example:
+The demo dataset should:
 
-| Signal     | Futuristic            | Playful           | Epic                 |
-| ---------- | --------------------- | ----------------- | -------------------- |
-| Activity   | Clean electronic kick | Bouncy percussion | Cinematic drum hit   |
-| Repo       | Synth arp             | Pluck pattern     | Low brass/string pad |
-| Stars      | Shimmer reverb        | Sparkle accent    | Huge hall reverb     |
-| Forks      | Digital delay         | Ping-pong echo    | Distant echo swell   |
-| Burstiness | Laser fill            | Percussion roll   | Taiko-style impact   |
+- include at least two identities;
+- include multiple repositories and languages;
+- include recent and dormant repos;
+- preserve `sourceUsernames`;
+- demonstrate duplicate-repo merge behavior;
+- generate meaningful summary metrics and approximate activity days.
 
----
-
-### 6.3 Multi-account audio modes
-
-#### Composite
-
-MVP mode.
-
-Behaviour:
-
-- all accounts drive one combined track;
-- account source mostly hidden;
-- source can subtly influence stereo spread or accent variation.
-
-#### Layered
-
-Future mode.
-
-Behaviour:
-
-- each account gets one or more instrument layers;
-- account can be muted/soloed;
-- panning and timbre can distinguish accounts.
-
-#### Compare
-
-Future mode.
-
-Behaviour:
-
-- accounts remain distinct;
-- shared transport;
-- split visual/audio channels.
+Demo data should produce `mode: 'demo'`.
 
 ---
 
-### 6.4 Timing model
+## 11. Testing expectations
 
-MVP recommendation:
+Stage 2 data logic should remain easy to unit test without live API access.
 
-```text
-16-bar loop
-4/4 time
-one selected time range compressed into the loop
-```
+Current required test coverage:
 
-Possible time ranges:
+- normalizing a GitHub profile;
+- normalizing repositories with language payloads;
+- handling missing language data;
+- merging two identities;
+- deduplicating duplicate repos;
+- preserving `sourceUsernames`;
+- preserving failed identity errors;
+- calculating summary metrics;
+- producing `single` vs `merged` profile mode correctly.
 
-```text
-30 days
-90 days
-1 year
-```
-
-Mapping options:
-
-| Time range | Loop mapping               |
-| ---------- | -------------------------- |
-| 30 days    | roughly 2 days per bar     |
-| 90 days    | roughly 5-6 days per bar   |
-| 1 year     | roughly 22-23 days per bar |
-
-This can be refined later.
+The existing app smoke test should continue to pass alongside the Stage 2 unit tests.
 
 ---
 
-## 7. Visual mapping specification
+## 12. Future stages
 
-### 7.1 Core visual mapping table
+Stage 3 will map the normalized GitPulse dataset into a basic playable Tone.js loop.
 
-| GitHub signal     | Visual mapping              |
-| ----------------- | --------------------------- |
-| Merged identity   | Central core                |
-| Account source    | Rings/chips/accent colours  |
-| Repository        | Orbiting node               |
-| Repo stars        | Node size/glow              |
-| Repo forks        | Branching trails            |
-| Primary language  | Colour/material             |
-| Recent activity   | Brightness/pulse frequency  |
-| Dormant repo      | Dim/distant node            |
-| Activity score    | Particle density            |
-| Consistency score | Smooth orbital motion       |
-| Burstiness score  | Shockwaves/explosions       |
-| Audio analyser    | Scale/glow/motion amplitude |
+Later stages may add:
 
----
-
-### 7.2 Multi-account visual modes
-
-#### Composite
-
-MVP mode.
-
-- one central core;
-- all repos orbit in one system;
-- account source shown subtly through node outline or ring colour.
-
-#### Layered
-
-Future mode.
-
-- each account has an orbit band;
-- account colour is more visible;
-- merged track still plays as one composition.
-
-#### Compare
-
-Future mode.
-
-- split visual lanes;
-- account systems side by side;
-- shared audio timeline.
-
----
-
-## 8. Language mapping
-
-Languages should map to both sound and colour.
-
-Initial colour and instrument mapping can be simple and centralised.
-
-Example:
-
-```ts
-export const languageMappings = {
-  TypeScript: {
-    colour: '#38bdf8',
-    instrumentHint: 'leadSynth',
-  },
-  JavaScript: {
-    colour: '#facc15',
-    instrumentHint: 'pluckSynth',
-  },
-  Python: {
-    colour: '#60a5fa',
-    instrumentHint: 'softKeys',
-  },
-  CSharp: {
-    colour: '#a78bfa',
-    instrumentHint: 'bassSynth',
-  },
-  Rust: {
-    colour: '#fb923c',
-    instrumentHint: 'distortedSynth',
-  },
-  Go: {
-    colour: '#22d3ee',
-    instrumentHint: 'arpSynth',
-  },
-}
-```
-
-Unknown languages should fall back to a neutral mapping.
-
----
-
-## 9. Demo dataset requirements
-
-Demo data should include:
-
-- at least two accounts;
-- at least 8 repositories;
-- multiple languages;
-- recent and dormant repos;
-- varied stars/forks;
-- a visible activity pattern;
-- enough data to demonstrate multi-account merge.
-
-Demo usernames can be fictional.
-
----
-
-## 10. Testing expectations
-
-Core merge functions should be easy to unit test.
-
-Recommended tests:
-
-- username parser handles comma-separated input;
-- username parser removes duplicates;
-- repo merge deduplicates by owner/name;
-- source usernames are preserved;
-- activity days merge correctly;
-- failed account fetch does not destroy successful account data;
-- demo data conforms to `GitPulseDataset`.
-
----
-
-## 11. Future extensions
-
-Potential future data improvements:
-
-- GitHub GraphQL contribution calendar;
-- OAuth/private contributions;
-- organisation-level visualisation;
-- team merge mode;
-- annual recap mode;
-- MIDI export;
-- shareable saved configs;
-- AI-generated overlay prompts.
+- true contribution data via GraphQL or another approved source;
+- OAuth and private-repo support;
+- per-account layered audio modes;
+- richer visual systems in React Three Fiber;
+- export and share flows;
+- extended language, mood, and signal mappings.
