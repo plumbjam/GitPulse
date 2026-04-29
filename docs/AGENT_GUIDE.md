@@ -8,6 +8,8 @@ GitPulse is a creative web application that turns one or more GitHub usernames i
 
 Agents should work in small, testable passes and avoid broad, uncontrolled rewrites.
 
+This guide also defines the expected reporting standard for agent work. Agent reports must include enough evidence for the project owner to judge whether a pass is truly green.
+
 ---
 
 ## 2. Core project intent
@@ -33,12 +35,15 @@ Agents should:
 
 1. inspect relevant files first;
 2. state what they found;
-3. make focused changes only;
-4. avoid unrelated refactors;
-5. preserve existing behaviour unless explicitly asked to change it;
-6. run available checks;
-7. summarise exactly what changed;
-8. list any risks or follow-up tasks.
+3. identify assumptions and possible mismatches;
+4. make focused changes only;
+5. avoid unrelated refactors;
+6. preserve existing behaviour unless explicitly asked to change it;
+7. run available checks;
+8. summarise exactly what changed;
+9. provide evidence against the task acceptance criteria;
+10. state what was and was not manually verified;
+11. list any risks or follow-up tasks.
 
 Agents should not:
 
@@ -48,7 +53,9 @@ Agents should not:
 - commit secrets or tokens;
 - silently change public contracts;
 - make the audio start automatically;
-- remove multi-account source attribution.
+- remove multi-account source attribution;
+- remove demo fallback behaviour;
+- overclaim that a pass is verified when runtime/manual checks were not possible.
 
 ---
 
@@ -69,17 +76,22 @@ Important product rules:
 
 - Multi-account merge is a first-class feature.
 - GitHub data must be normalised before audio/visual use.
+- The contribution calendar is the preferred audio timing source.
 - Audio must only start after explicit user interaction.
-- No OAuth/backend/private repo support in MVP unless explicitly requested.
+- OAuth/backend/private repo support must only be added when explicitly requested.
 - Keep changes focused and testable.
 
-# Files likely involved
+# Current state to inspect before editing
 
-[List files or folders.]
+[List files/folders and behaviours the agent must inspect.]
 
 # Required behaviour
 
 [List exact expected behaviour.]
+
+# Acceptance criteria
+
+[Numbered list of concrete criteria.]
 
 # Non-goals
 
@@ -89,23 +101,136 @@ Important product rules:
 
 Run:
 
-- npm run typecheck
+- npm run format
 - npm run lint
+- npm run format:check
+- npm run typecheck
+- npm run test
 - npm run build
 
 # Output required
 
-Return:
-
-1. files changed;
-2. summary of changes;
-3. checks run and results;
-4. risks/follow-ups.
+Use the required final report template from this guide.
 ```
 
 ---
 
-## 5. Example prompt — app skeleton
+## 5. Required final report template
+
+Every agent completion report should use this structure.
+
+```md
+## Final Report
+
+### Files Created
+
+- ...
+
+### Files Modified
+
+- ...
+
+### Implementation Summary
+
+- ...
+
+### Acceptance Criteria Status
+
+| #   | Criterion | Status                                  | Evidence / Notes |
+| --- | --------- | --------------------------------------- | ---------------- |
+| 1   | ...       | DONE / PARTIAL / NOT VERIFIED / BLOCKED | ...              |
+
+### Tuning / Behaviour Changes
+
+| Area | Before | After | Reason |
+| ---- | ------ | ----- | ------ |
+| ...  | ...    | ...   | ...    |
+
+### Tests Added or Updated
+
+- `file.test.ts`
+  - ...
+
+### Commands Run
+
+| Command              | Result                    |
+| -------------------- | ------------------------- |
+| npm run format       | Passed / Failed / Not run |
+| npm run lint         | Passed / Failed / Not run |
+| npm run format:check | Passed / Failed / Not run |
+| npm run typecheck    | Passed / Failed / Not run |
+| npm run test         | Passed / Failed / Not run |
+| npm run build        | Passed / Failed / Not run |
+
+### Manual Verification
+
+| Behaviour                    | Verified?                 | Notes |
+| ---------------------------- | ------------------------- | ----- |
+| Browser UI loads             | Yes / No / Not available  | ...   |
+| Audible playback             | Yes / No / Not applicable | ...   |
+| No clipping/distortion       | Yes / No / Not applicable | ...   |
+| Play/Stop no duplicate loops | Yes / No / Not applicable | ...   |
+| Active tile follows playback | Yes / No / Not applicable | ...   |
+| OAuth login flow             | Yes / No / Not applicable | ...   |
+
+### Known Limitations
+
+- ...
+
+### Residual Risks / Follow-up Candidates
+
+- ...
+
+### Recommended Next Stage
+
+- ...
+```
+
+Status meanings:
+
+- `DONE`: implemented and verified by tests, manual checks, or both.
+- `PARTIAL`: implemented but incomplete, or only part of the requirement is satisfied.
+- `NOT VERIFIED`: implementation exists, but the agent could not verify the behaviour.
+- `BLOCKED`: could not implement or verify because of a dependency, missing credential, environment limitation, or unresolved issue.
+
+---
+
+## 6. Reporting evidence requirements
+
+Agents should avoid vague statements such as:
+
+```text
+Implemented and working.
+```
+
+Instead, they should provide evidence:
+
+```text
+Implemented full-range playback.
+Evidence: contributionSequencer.test.ts verifies pattern.steps.length equals calendar.days.length; manual browser test was not available.
+```
+
+For tuning changes, agents should include before/after values:
+
+```text
+Default volume: 35% -> 58%
+Limiter ceiling: -6 dB -> -3 dB
+Loop length: fixed 64 steps -> dynamic full calendar range
+```
+
+For runtime-sensitive claims, agents must say whether they were manually verified.
+
+Examples:
+
+```text
+Audible loudness: Not manually verified from this environment.
+OAuth login: Not verified because no GitHub OAuth credentials were available.
+Active tile auto-scroll: Verified in browser at localhost.
+```
+
+---
+
+## 7. Example prompt — app skeleton
 
 ```md
 # Task
@@ -133,22 +258,22 @@ Use mock data only in this pass.
 # Non-goals
 
 Do not add GitHub API calls yet.
-Do not add Tone.js yet.
-Do not add Three.js yet.
+Do not add Tone.js playback yet.
+Do not add Three.js rendering yet.
 Do not add backend code.
 
 # Checks
 
-Run typecheck/build if configured.
+Run the configured checks if available.
 
 # Output required
 
-Summarise files changed and any setup notes.
+Use the required final report template.
 ```
 
 ---
 
-## 6. Example prompt — multi-account merge
+## 8. Example prompt — multi-account merge
 
 ```md
 # Task
@@ -168,14 +293,14 @@ GitPulse must allow users to combine personal and work GitHub accounts into one 
 - Failed accounts show clear errors without crashing successful accounts.
 - Repositories are deduplicated by canonical owner/name.
 - Source usernames are preserved on repos and activity days.
-- Output dataset uses mergeMode: 'composite'.
+- Output dataset uses composite/merged mode.
 
 # Files likely involved
 
 src/github/
-src/types/
-src/components/UsernameForm.tsx
-src/components/AccountChips.tsx
+src/domain/
+src/components/
+src/store/
 
 # Non-goals
 
@@ -186,19 +311,16 @@ Do not add backend code.
 
 # Checks
 
-Run:
-
-- npm run typecheck
-- npm run build
+Run the configured checks.
 
 # Output required
 
-Return files changed, summary, checks, and known limitations.
+Use the required final report template.
 ```
 
 ---
 
-## 7. Example prompt — audio engine
+## 9. Example prompt — audio engine
 
 ```md
 # Task
@@ -211,13 +333,14 @@ The audio engine should translate a normalised GitPulseDataset into a generated 
 
 # Required behaviour
 
-- Create AudioEngine under src/audio.
-- Add Play/Pause/Stop controls.
-- Generate a 16-bar loop from the dataset.
-- Use safe default volume and a limiter/compressor.
+- Create audio engine under src/audio.
+- Add Play/Stop controls.
+- Generate a deterministic loop from the contribution calendar.
+- Use safe default volume and limiter/compressor protection.
 - Use simple instruments: kick, snare/clap, hi-hat, bass synth, lead synth, pad.
-- Use pentatonic scale or similarly safe constraints.
-- Dispose audio resources cleanly.
+- Keep pure mapping functions separate from Tone.js runtime.
+- Avoid duplicate scheduled loops on repeated Play/Stop.
+- Dispose or stop audio resources cleanly.
 
 # Non-goals
 
@@ -228,19 +351,20 @@ Do not autoplay.
 
 # Checks
 
-Run:
-
-- npm run typecheck
-- npm run build
+Run the configured checks.
 
 # Output required
 
-Return files changed, summary, checks, and audio behaviour notes.
+Use the required final report template, including:
+
+- audio lifecycle details;
+- volume/gain before/after values;
+- whether audible playback was manually verified.
 ```
 
 ---
 
-## 8. Example prompt — visual engine
+## 10. Example prompt — visual engine
 
 ```md
 # Task
@@ -269,19 +393,65 @@ Do not add multiple visual modes unless trivial.
 
 # Checks
 
-Run:
-
-- npm run typecheck
-- npm run build
+Run the configured checks.
 
 # Output required
 
-Return files changed, summary, checks, and performance notes.
+Use the required final report template, including:
+
+- performance notes;
+- manual browser verification status;
+- any visual limitations.
 ```
 
 ---
 
-## 9. Data model rules agents must preserve
+## 11. Example prompt — OAuth/serverless broker
+
+```md
+# Task
+
+Implement GitHub OAuth login via a small serverless broker.
+
+# Context
+
+GitPulse currently supports manual token entry for GitHub GraphQL contribution calendar access. The desired public UX is Log in with GitHub. The GitHub Pages frontend must not contain the OAuth client secret.
+
+# Required behaviour
+
+- Add GitHub OAuth login UI.
+- Generate and validate OAuth state.
+- Add or scaffold a serverless broker for code-for-token exchange.
+- Keep the GitHub client secret server-side only.
+- Store token/session data safely.
+- Keep demo/approximate fallback working without login.
+- Keep manual token mode as advanced fallback unless explicitly removed.
+
+# Non-goals
+
+Do not add a database.
+Do not add full user accounts.
+Do not request broad repository scopes unless justified.
+Do not expose secrets in frontend code.
+
+# Checks
+
+Run the configured checks.
+
+# Output required
+
+Use the required final report template, including:
+
+- environment variables required;
+- callback URLs;
+- what was actually tested;
+- what could not be tested without credentials;
+- security-sensitive files touched.
+```
+
+---
+
+## 12. Data model rules agents must preserve
 
 Agents must preserve these principles:
 
@@ -289,87 +459,103 @@ Agents must preserve these principles:
 2. Audio should consume `GitPulseDataset` or derived mapping objects.
 3. Visuals should consume `GitPulseDataset` or visual-ready projections.
 4. Multi-account source attribution must be preserved.
-5. Deduplication should use canonical repo names where possible.
-6. Merge mode should be explicit.
+5. Deduplication should use GitHub repo ID where possible, then canonical repo names.
+6. Merge/composite mode should be explicit.
 7. The app should work with demo data.
+8. Contribution calendar and repo-push fallback must be clearly distinguished.
+9. Private contribution counts must not be used to infer private repo details.
 
 ---
 
-## 10. Audio implementation rules
+## 13. Audio implementation rules
 
 Agents working on audio must:
 
 - initialise audio only after user action;
 - avoid autoplay;
-- cap master volume;
+- cap/limit master volume;
 - avoid clipping;
-- dispose Tone.js nodes cleanly;
-- keep generated patterns deterministic when a seed is provided;
+- report before/after volume/gain changes;
+- dispose or stop Tone.js nodes cleanly;
+- prevent duplicate scheduled loops;
+- keep generated patterns deterministic when intended;
 - avoid uncontrolled randomness;
-- keep mood configuration data-driven where possible.
+- keep mood configuration data-driven where possible;
+- keep pure mapping functions testable;
+- explicitly say whether audible playback and clipping were manually verified.
 
 ---
 
-## 11. Visual implementation rules
+## 14. Visual implementation rules
 
 Agents working on visuals must:
 
-- keep R3F code isolated under `src/visuals` where possible;
+- keep R3F code isolated under appropriate visual components where possible;
 - avoid excessive particle counts;
 - keep idle state visually interesting;
 - make mood changes visually obvious;
 - preserve accessibility of surrounding controls;
-- avoid blocking the UI thread.
+- avoid blocking the UI thread;
+- explicitly state whether animation/performance was manually verified.
 
 ---
 
-## 12. GitHub API implementation rules
+## 15. GitHub API implementation rules
 
 Agents working on GitHub integration must:
 
 - handle rate limits gracefully;
 - include demo fallback;
-- avoid requiring tokens in MVP;
 - never commit tokens;
 - isolate API calls under `src/github`;
 - preserve partial successes for multi-account fetches;
-- clearly report failed usernames.
+- clearly report failed usernames;
+- distinguish public REST data from GraphQL contribution calendar data;
+- never infer private repo details from anonymous contribution counts.
 
 ---
 
-## 13. Documentation update rules
+## 16. Documentation update rules
 
-When an agent changes architecture, it should update relevant docs:
+When an agent changes architecture or product behaviour, it should update relevant docs:
 
+- `README.md` for current status and setup;
 - `docs/HLD.md` for major design changes;
 - `docs/PROJECT_PLAN.md` for delivery changes;
 - `docs/DATA_AND_MAPPING_SPEC.md` for data/mapping changes;
 - `docs/STYLE_GUIDE.md` for visual/audio style changes;
-- `README.md` for user-facing setup changes.
+- `CONTRIBUTING.md` for workflow, testing, and contributor guidance.
 
 ---
 
-## 14. Agent completion checklist
+## 17. Agent completion checklist
 
 Every agent response should include:
 
 ```text
 Before edits:
 - What was inspected
+- Current repo state
 - What needed changing
 - Risks identified
+- Planned minimal changes
 
 After edits:
-- Files changed
+- Files created
+- Files modified
 - Behaviour implemented
-- Checks run
-- Results
-- Remaining risks/follow-ups
+- Acceptance criteria status table
+- Tuning / behaviour before-after table
+- Tests added or updated
+- Commands run and results
+- Manual verification status
+- Known limitations
+- Residual risks/follow-ups
 ```
 
 ---
 
-## 15. High-risk changes needing explicit approval
+## 18. High-risk changes needing explicit approval
 
 Agents should not do these without explicit instruction:
 
@@ -381,4 +567,6 @@ Agents should not do these without explicit instruction:
 - change licensing;
 - change the core product direction;
 - remove multi-account merge support;
-- remove demo data fallback.
+- remove demo data fallback;
+- store tokens insecurely;
+- expose client secrets in frontend code.
