@@ -4,16 +4,19 @@
 
 GitPulse is an open-source creative web app that turns one or more GitHub identities into a personalized audio-visual coding signature.
 
-## Stage 3.2 status
+## Stage 2.6 + Stage 3.2 status
 
-Stage 3.2 refines playback so the full contribution range is audible, visible, and easier to follow.
+Stage 2.6 adds GitHub OAuth login through a Cloudflare Worker broker while preserving the Stage 3.2 full-range playback experience.
 
 Implemented so far:
 
 - public GitHub REST fetching for profile, repositories, and repository languages;
 - multi-account normalization and merge logic;
 - repo/language summary metrics and approximate repo-push timeline;
-- optional GitHub GraphQL contribution calendar fetching with a user-provided token;
+- optional GitHub GraphQL contribution calendar fetching with OAuth or an advanced manual token;
+- GitHub OAuth login through a Cloudflare Worker broker for contribution-calendar access;
+- advanced manual token fallback for development;
+- OAuth session tokens stored in `sessionStorage` for the current browser session;
 - merged contribution calendar data model with deterministic intensity levels;
 - GitPulse-styled contribution grid UI;
 - demo and approximate fallback contribution modes when no token is present;
@@ -28,8 +31,8 @@ Implemented so far:
 
 Not implemented yet:
 
-- GitHub OAuth;
-- backend proxy services;
+- full user accounts or database-backed sessions;
+- broad backend proxy services beyond the OAuth broker;
 - private repository detail access;
 - live React Three Fiber scene;
 - export/share flows;
@@ -89,14 +92,17 @@ This powers:
 - merged day-by-day activity timeline;
 - primary timing source for the Stage 3 audio engine.
 
-GraphQL contribution calendar fetching requires a token, but the app does not require a token to remain usable.
+GraphQL contribution calendar fetching requires an OAuth session token or a manual development token, but the app does not require either to remain usable.
 
-## Token behavior
+## OAuth and Token Behavior
 
-- token input is optional;
-- token is stored in memory only for the current browser session;
-- token is not committed to files and is not logged by the app;
-- without a token, GitPulse falls back to demo or approximate contribution activity;
+- GitHub OAuth is the primary public connection path;
+- a Cloudflare Worker broker exchanges GitHub OAuth codes for access tokens;
+- the GitHub OAuth client secret is never placed in frontend code;
+- OAuth tokens are stored in `sessionStorage` and cleared when the browser session ends or the user disconnects;
+- manual token input remains available as an advanced developer fallback;
+- manual tokens are stored in memory only;
+- without OAuth or a manual token, GitPulse falls back to demo or approximate contribution activity;
 - if GitHub includes private contribution counts for your token and settings, GitPulse treats them as anonymous count data only.
 
 GitPulse does not infer private repository names, languages, or private repo details from contribution counts.
@@ -162,6 +168,8 @@ npm install
 npm run dev
 ```
 
+For OAuth configuration, see [docs/OAUTH_SETUP.md](docs/OAUTH_SETUP.md).
+
 ## Quality commands
 
 ```bash
@@ -211,6 +219,7 @@ This matches repository-name deployment on GitHub Pages.
 - `docs/ROADMAP.md`
 - `docs/STYLE_GUIDE.md`
 - `docs/DATA_AND_MAPPING_SPEC.md`
+- `docs/OAUTH_SETUP.md`
 - `docs/AGENT_GUIDE.md`
 - `docs/AGENT_FOUNDATION_PROMPT.md`
 

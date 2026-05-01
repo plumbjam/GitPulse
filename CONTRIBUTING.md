@@ -26,7 +26,7 @@ Please preserve these principles:
 The current completed stage is:
 
 ```text
-Stage 3.2 - Playback refinement
+Stage 2.6 - GitHub OAuth login via Cloudflare Worker broker
 ```
 
 This stage includes:
@@ -34,6 +34,8 @@ This stage includes:
 - public GitHub REST repo/language ingestion;
 - multi-account merged datasets;
 - optional GitHub GraphQL contribution calendar fetching;
+- GitHub OAuth login through a Cloudflare Worker broker;
+- session-scoped OAuth token storage with advanced manual token fallback;
 - demo and approximate contribution fallbacks;
 - merged contribution grid rendering;
 - deterministic Tone.js contribution sequencing;
@@ -46,8 +48,8 @@ This stage includes:
 
 This stage intentionally does not include:
 
-- OAuth or token persistence beyond runtime memory;
-- backend proxies;
+- full user accounts or database-backed sessions;
+- backend proxies beyond the OAuth broker;
 - private repo detail fetching;
 - downloaded sample packs;
 - AI audio generation;
@@ -179,12 +181,26 @@ Stage 2 REST data work should preserve:
 Stage 2.5 contribution calendar work should preserve:
 
 - GraphQL is optional and token-gated;
-- do not attempt GraphQL calendar fetches without a token;
-- token stays in memory only unless a future stage explicitly changes that;
+- do not attempt GraphQL calendar fetches without an OAuth or manual token;
+- OAuth tokens stay in `sessionStorage` for the browser session;
+- manual tokens stay in memory only;
 - do not log tokens;
 - do not store token values in source-controlled files;
+- do not expose GitHub OAuth client secrets in frontend code;
 - if GraphQL contribution fetch fails, preserve the REST dataset and fall back to approximate contribution activity;
 - merged calendars must preserve `perIdentityCounts`, `sourceUsernames`, and date continuity.
+
+### GitHub OAuth broker behavior
+
+Stage 2.6 OAuth work should preserve:
+
+- GitHub Pages as the frontend deployment target;
+- Cloudflare Worker as the code-for-token broker;
+- `read:user` as the default OAuth scope;
+- OAuth state generation and validation before code exchange;
+- callback query params removed after processing;
+- OAuth token preferred over the manual token for GraphQL;
+- disconnect clearing the OAuth session without deleting REST/demo data.
 
 ### Tone.js audio behavior
 
@@ -297,6 +313,7 @@ If your change affects architecture or Stage 3 behavior, update the relevant doc
 - `HLD.md`
 - `docs/PROJECT_PLAN.md`
 - `docs/DATA_AND_MAPPING_SPEC.md`
+- `docs/OAUTH_SETUP.md`
 - `docs/ROADMAP.md`
 
 Keep documentation aligned with the real repository state rather than the intended future state.

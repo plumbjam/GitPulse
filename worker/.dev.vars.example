@@ -1,0 +1,4 @@
+GITHUB_CLIENT_ID=your-public-client-id
+GITHUB_CLIENT_SECRET=your-oauth-client-secret
+ALLOWED_ORIGIN=http://localhost:5173
+ALLOWED_REDIRECT_URIS=http://localhost:5173/GitPulse/,https://plumbjam.github.io/GitPulse/

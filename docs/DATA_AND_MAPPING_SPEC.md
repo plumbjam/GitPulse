@@ -26,6 +26,7 @@ multi-account merge
 GitPulseDataset
 
 Optional GitHub GraphQL contribution calendar
+  via OAuth session token or manual development token
   ->
 calendar normalization
   ->
@@ -68,7 +69,6 @@ GET https://api.github.com/repos/{owner}/{repo}/languages
 Constraints:
 
 - public data only;
-- no OAuth in Stage 3;
 - no private repo detail access;
 - language byte fetches capped to the most recently pushed 24 repos per identity.
 
@@ -86,9 +86,10 @@ Used for:
 
 Constraints:
 
-- requires a user-provided token;
+- requires an OAuth session token or an advanced manual token;
 - do not attempt this query without a token;
-- token is runtime-only in memory;
+- OAuth tokens are stored in `sessionStorage` for the browser session;
+- manual tokens are runtime-only in memory;
 - contribution data may include anonymous private counts if GitHub provides them, but GitPulse must not infer private repo details.
 
 ---
@@ -294,8 +295,22 @@ Contribution data must respect these rules:
 
 - do not infer private repo names or languages from private contribution counts;
 - do not expose token values in logs, errors, or committed files;
+- do not expose the GitHub OAuth client secret in frontend code;
+- exchange OAuth authorization codes only through the Cloudflare Worker broker;
 - treat private or restricted contribution counts as anonymous activity only;
 - clearly distinguish repo-centric REST data from GraphQL contribution-calendar data and approximate fallback data.
+
+---
+
+## 13.1. OAuth token source rules
+
+GitPulse uses these GraphQL token sources in priority order:
+
+1. OAuth session token loaded from `sessionStorage`.
+2. Advanced manual development token stored in memory.
+3. No token, which means demo or approximate contribution fallback.
+
+The OAuth token is not part of `GitPulseDataset` and must not be serialized into generated data. Disconnecting OAuth clears the session token and leaves REST/demo data intact.
 
 ---
 

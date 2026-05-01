@@ -1,4 +1,9 @@
 import { create } from 'zustand'
+import {
+  clearGitHubOAuthSession,
+  loadGitHubOAuthSession,
+  saveGitHubOAuthSession,
+} from '@/auth/oauthSession'
 import { AUDIO_BPM_RANGE, DEFAULT_AUDIO_VOLUME, getMoodDefaultBpm } from '@/audio/moods'
 import { createDemoIdentityDatasets } from '@/data/demoDataset'
 import type {
@@ -22,6 +27,9 @@ import {
   normaliseGitHubFetchResult,
 } from '@/github/githubNormaliser'
 
+type GitPulseAuthMode = 'none' | 'oauth' | 'manual-token'
+type GitPulseOAuthStatus = 'idle' | 'starting' | 'exchanging' | 'connected' | 'error'
+
 type GitPulseState = {
   previewMode: boolean
   mood: GitPulseMood
@@ -34,6 +42,10 @@ type GitPulseState = {
   contributionFetchError?: string
   identityErrors: Record<string, string>
   githubToken: string
+  authMode: GitPulseAuthMode
+  oauthAccessToken?: string
+  oauthStatus: GitPulseOAuthStatus
+  oauthError?: string
   intensity: number
   tempo: number
   volume: number
@@ -46,6 +58,11 @@ type GitPulseState = {
   setDraftUsername: (username: string) => void
   setGitHubToken: (token: string) => void
   clearGitHubToken: () => void
+  setOAuthToken: (token: string, metadata?: { scope?: string; tokenType?: string }) => void
+  clearOAuthSession: () => void
+  setOAuthStatus: (status: GitPulseOAuthStatus) => void
+  setOAuthError: (message?: string) => void
+  loadOAuthSessionFromStorage: () => void
   fetchAndAddIdentity: (username: string) => Promise<void>
   refreshContributionCalendars: () => Promise<void>
   removeIdentity: (id: string) => void
@@ -73,6 +90,10 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
   contributionFetchError: undefined,
   identityErrors: {},
   githubToken: '',
+  authMode: 'none',
+  oauthAccessToken: undefined,
+  oauthStatus: 'idle',
+  oauthError: undefined,
   intensity: 70,
   tempo: getMoodDefaultBpm('futuristic'),
   volume: DEFAULT_AUDIO_VOLUME,
@@ -89,30 +110,108 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
     })),
   setDraftUsername: (draftUsername) => set({ draftUsername, fetchError: undefined }),
   setGitHubToken: (githubToken) =>
-    set({
-      githubToken: githubToken.trim(),
-      contributionFetchError: undefined,
+    set((state) => {
+      const trimmedToken = githubToken.trim()
+
+      return {
+        githubToken: trimmedToken,
+        authMode: state.oauthAccessToken ? 'oauth' : trimmedToken ? 'manual-token' : 'none',
+        contributionFetchError: undefined,
+      }
     }),
   clearGitHubToken: () =>
     set((state) => {
-      const nextIdentityDatasets = state.identityDatasets.map((dataset) =>
-        dataset.mode === 'live' ? { ...dataset, contributionCalendar: undefined } : dataset,
-      )
+      const nextIdentityDatasets = state.oauthAccessToken
+        ? state.identityDatasets
+        : state.identityDatasets.map((dataset) =>
+            dataset.mode === 'live' ? { ...dataset, contributionCalendar: undefined } : dataset,
+          )
 
       return {
         githubToken: '',
+        authMode: state.oauthAccessToken ? 'oauth' : 'none',
         identityDatasets: nextIdentityDatasets,
-        dataset: nextIdentityDatasets.length
-          ? mergeIdentityDatasets(nextIdentityDatasets, {
-              mode: getDatasetMode(nextIdentityDatasets),
-            })
-          : createEmptyGitPulseDataset('live'),
+        dataset: state.oauthAccessToken
+          ? state.dataset
+          : nextIdentityDatasets.length
+            ? mergeIdentityDatasets(nextIdentityDatasets, {
+                mode: getDatasetMode(nextIdentityDatasets),
+              })
+            : createEmptyGitPulseDataset('live'),
         isAudioPlaying: false,
         isFetchingContributions: false,
         audioError: undefined,
         contributionFetchError: undefined,
       }
     }),
+  setOAuthToken: (oauthAccessToken, metadata) => {
+    const trimmedToken = oauthAccessToken.trim()
+
+    if (!trimmedToken) {
+      return
+    }
+
+    saveGitHubOAuthSession({
+      accessToken: trimmedToken,
+      tokenType: metadata?.tokenType ?? 'bearer',
+      scope: metadata?.scope ?? '',
+    })
+    set({
+      authMode: 'oauth',
+      oauthAccessToken: trimmedToken,
+      oauthStatus: 'connected',
+      oauthError: undefined,
+      contributionFetchError: undefined,
+    })
+  },
+  clearOAuthSession: () => {
+    clearGitHubOAuthSession()
+    set((state) => {
+      const shouldClearCalendars = !state.githubToken
+      const nextIdentityDatasets = shouldClearCalendars
+        ? state.identityDatasets.map((dataset) =>
+            dataset.mode === 'live' ? { ...dataset, contributionCalendar: undefined } : dataset,
+          )
+        : state.identityDatasets
+
+      return {
+        authMode: state.githubToken ? 'manual-token' : 'none',
+        oauthAccessToken: undefined,
+        oauthStatus: 'idle',
+        oauthError: undefined,
+        identityDatasets: nextIdentityDatasets,
+        dataset: shouldClearCalendars
+          ? nextIdentityDatasets.length
+            ? mergeIdentityDatasets(nextIdentityDatasets, {
+                mode: getDatasetMode(nextIdentityDatasets),
+              })
+            : createEmptyGitPulseDataset('live')
+          : state.dataset,
+        isAudioPlaying: false,
+        contributionFetchError: undefined,
+      }
+    })
+  },
+  setOAuthStatus: (oauthStatus) => set({ oauthStatus }),
+  setOAuthError: (oauthError) =>
+    set({
+      oauthError,
+      oauthStatus: oauthError ? 'error' : 'idle',
+    }),
+  loadOAuthSessionFromStorage: () => {
+    const session = loadGitHubOAuthSession()
+
+    if (!session) {
+      return
+    }
+
+    set({
+      authMode: 'oauth',
+      oauthAccessToken: session.accessToken,
+      oauthStatus: 'connected',
+      oauthError: undefined,
+    })
+  },
   fetchAndAddIdentity: async (username) => {
     const trimmedUsername = normaliseGitHubUsernameInput(username)
 
@@ -167,10 +266,12 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       )
       let contributionFetchError: string | undefined
 
-      if (resolvedDataset.identity.status === 'success' && get().githubToken) {
+      const graphqlToken = getGraphqlAccessToken(get())
+
+      if (resolvedDataset.identity.status === 'success' && graphqlToken) {
         const contributionResult = await loadContributionCalendarForUsername(
           resolvedDataset.identity.username,
-          get().githubToken,
+          graphqlToken,
         )
 
         if (contributionResult.status === 'success') {
@@ -245,7 +346,8 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
     }
   },
   refreshContributionCalendars: async () => {
-    const { githubToken, identityDatasets } = get()
+    const { identityDatasets } = get()
+    const graphqlToken = getGraphqlAccessToken(get())
 
     if (!identityDatasets.length) {
       set({
@@ -255,7 +357,7 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       return
     }
 
-    if (!githubToken) {
+    if (!graphqlToken) {
       set((state) => {
         const nextIdentityDatasets = state.identityDatasets.map((dataset) =>
           dataset.mode === 'live' ? { ...dataset, contributionCalendar: undefined } : dataset,
@@ -285,7 +387,7 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
     )
     const contributionResults = await Promise.all(
       liveIdentityDatasets.map((dataset) =>
-        loadContributionCalendarForUsername(dataset.identity.username, githubToken),
+        loadContributionCalendarForUsername(dataset.identity.username, graphqlToken),
       ),
     )
     const contributionResultsByUsername = new Map(
@@ -435,6 +537,10 @@ function getDatasetMode(identityDatasets: GitPulseIdentityDataset[]) {
   }
 
   return 'demo'
+}
+
+function getGraphqlAccessToken(state: GitPulseState) {
+  return state.oauthAccessToken || state.githubToken
 }
 
 async function loadContributionCalendarForUsername(username: string, githubToken: string) {

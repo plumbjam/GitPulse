@@ -6,6 +6,7 @@ const initialStoreState = useGitPulseStore.getState()
 
 describe('useGitPulseStore audio state', () => {
   beforeEach(() => {
+    sessionStorage.clear()
     useGitPulseStore.setState(initialStoreState, true)
   })
 
@@ -64,6 +65,53 @@ describe('useGitPulseStore audio state', () => {
     expect(useGitPulseStore.getState()).toMatchObject({
       activeAudioStepIndex: null,
       activeAudioDate: undefined,
+    })
+  })
+
+  it('stores an OAuth token as the preferred auth mode', () => {
+    useGitPulseStore.getState().setGitHubToken('manual-token')
+    useGitPulseStore.getState().setOAuthToken('oauth-token', {
+      scope: 'read:user',
+      tokenType: 'bearer',
+    })
+
+    const state = useGitPulseStore.getState()
+
+    expect(state.authMode).toBe('oauth')
+    expect(state.oauthStatus).toBe('connected')
+    expect(state.oauthAccessToken).toBe('oauth-token')
+    expect(state.githubToken).toBe('manual-token')
+  })
+
+  it('loads and clears OAuth sessions from sessionStorage', () => {
+    useGitPulseStore.getState().setOAuthToken('oauth-token')
+    useGitPulseStore.setState(initialStoreState, true)
+    useGitPulseStore.getState().loadOAuthSessionFromStorage()
+
+    expect(useGitPulseStore.getState()).toMatchObject({
+      authMode: 'oauth',
+      oauthAccessToken: 'oauth-token',
+      oauthStatus: 'connected',
+    })
+
+    useGitPulseStore.getState().clearOAuthSession()
+
+    expect(useGitPulseStore.getState()).toMatchObject({
+      authMode: 'none',
+      oauthAccessToken: undefined,
+      oauthStatus: 'idle',
+    })
+  })
+
+  it('falls back to manual token auth mode after OAuth disconnect when a token exists', () => {
+    useGitPulseStore.getState().setGitHubToken('manual-token')
+    useGitPulseStore.getState().setOAuthToken('oauth-token')
+    useGitPulseStore.getState().clearOAuthSession()
+
+    expect(useGitPulseStore.getState()).toMatchObject({
+      authMode: 'manual-token',
+      githubToken: 'manual-token',
+      oauthAccessToken: undefined,
     })
   })
 })

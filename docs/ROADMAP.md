@@ -37,7 +37,8 @@ Includes:
 ## Version 0.3 — Contribution calendar
 
 - add GitHub GraphQL support;
-- optional local token support;
+- add GitHub OAuth login through a Cloudflare Worker broker;
+- keep optional manual token support as an advanced development fallback;
 - proper contribution calendar mapping;
 - richer PR/issue/review signals;
 - better streak detection;

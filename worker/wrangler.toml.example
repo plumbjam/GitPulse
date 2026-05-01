@@ -1,0 +1,8 @@
+name = "gitpulse-oauth-broker"
+main = "src/index.ts"
+compatibility_date = "2026-04-29"
+
+[vars]
+GITHUB_CLIENT_ID = "your-public-client-id"
+ALLOWED_ORIGIN = "https://plumbjam.github.io"
+ALLOWED_REDIRECT_URIS = "https://plumbjam.github.io/GitPulse/,http://localhost:5173/GitPulse/"

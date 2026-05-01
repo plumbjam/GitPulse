@@ -690,9 +690,9 @@ Use GitHub GraphQL for contribution calendar data.
 
 Options:
 
-- paste token locally into browser memory only;
-- environment token via backend/serverless function;
-- OAuth later.
+- GitHub OAuth through the Cloudflare Worker broker;
+- paste token locally into browser memory only as an advanced fallback;
+- environment token via backend/serverless function only if explicitly scoped later.
 
 ### Step 8.3 — Replace approximate activity grid
 
