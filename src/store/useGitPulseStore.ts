@@ -4,7 +4,9 @@ import {
   loadGitHubOAuthSession,
   saveGitHubOAuthSession,
 } from '@/auth/oauthSession'
+import type { ActivityIntensityKey, SoundMappingsByMood, SoundRole } from '@/audio/audio.types'
 import { AUDIO_BPM_RANGE, DEFAULT_AUDIO_VOLUME, getMoodDefaultBpm } from '@/audio/moods'
+import { createDefaultSoundMappings, getDefaultMoodSoundMapping } from '@/audio/musicMapping'
 import { createDemoIdentityDatasets } from '@/data/demoDataset'
 import type {
   GitPulseDataset,
@@ -52,6 +54,7 @@ type GitPulseState = {
   isAudioPlaying: boolean
   audioError?: string
   hasUserTempoOverride: boolean
+  soundMappings: SoundMappingsByMood
   selectedStartStepIndex: number
   selectedStartDate?: string
   currentPlayheadStepIndex: number
@@ -78,6 +81,13 @@ type GitPulseState = {
   setIntensity: (intensity: number) => void
   setAudioPlaying: (isPlaying: boolean) => void
   setAudioError: (message?: string) => void
+  setSoundMapping: (
+    mood: GitPulseMood,
+    intensityKey: ActivityIntensityKey,
+    soundRole: SoundRole,
+  ) => void
+  resetSoundMappingForMood: (mood: GitPulseMood) => void
+  resetAllSoundMappings: () => void
   setSelectedStartStep: (index: number, date?: string) => void
   setCurrentPlayheadStep: (index: number, date?: string) => void
   cuePlayheadStep: (index: number, date?: string) => void
@@ -110,6 +120,7 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
   isAudioPlaying: false,
   audioError: undefined,
   hasUserTempoOverride: false,
+  soundMappings: createDefaultSoundMappings(),
   selectedStartStepIndex: 0,
   selectedStartDate: undefined,
   currentPlayheadStepIndex: 0,
@@ -541,6 +552,24 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       ...(isAudioPlaying ? {} : { activeAudioStepIndex: null, activeAudioDate: undefined }),
     }),
   setAudioError: (audioError) => set({ audioError }),
+  setSoundMapping: (mood, intensityKey, soundRole) =>
+    set((state) => ({
+      soundMappings: {
+        ...state.soundMappings,
+        [mood]: {
+          ...state.soundMappings[mood],
+          [intensityKey]: soundRole,
+        },
+      },
+    })),
+  resetSoundMappingForMood: (mood) =>
+    set((state) => ({
+      soundMappings: {
+        ...state.soundMappings,
+        [mood]: getDefaultMoodSoundMapping(mood),
+      },
+    })),
+  resetAllSoundMappings: () => set({ soundMappings: createDefaultSoundMappings() }),
   setSelectedStartStep: (selectedStartStepIndex, selectedStartDate) =>
     set({
       selectedStartStepIndex: Math.max(0, selectedStartStepIndex),

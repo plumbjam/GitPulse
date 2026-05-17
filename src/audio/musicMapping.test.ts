@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { FUTURISTIC_DEFAULT_BPM } from './moods'
 import {
+  DEFAULT_FUTURISTIC_SOUND_MAPPING,
+  createDefaultSoundMappings,
   mapIntensityToRhythmFlags,
+  resolveSoundRoleForIntensity,
   mapVolumePercentToDecibels,
   resolvePatternBpm,
 } from './musicMapping'
@@ -55,5 +58,14 @@ describe('music mapping helpers', () => {
     expect(mapVolumePercentToDecibels(0)).toBe(-60)
     expect(mapVolumePercentToDecibels(60)).toBeGreaterThan(-6)
     expect(mapVolumePercentToDecibels(100)).toBe(-1)
+  })
+
+  it('provides default mood-specific sound mappings', () => {
+    expect(createDefaultSoundMappings().futuristic).toEqual(DEFAULT_FUTURISTIC_SOUND_MAPPING)
+    expect(resolveSoundRoleForIntensity(1, DEFAULT_FUTURISTIC_SOUND_MAPPING)).toBe('pulse-blip')
+    expect(resolveSoundRoleForIntensity(4, DEFAULT_FUTURISTIC_SOUND_MAPPING)).toBe(
+      'bright-lead-hit',
+    )
+    expect(resolveSoundRoleForIntensity(0, DEFAULT_FUTURISTIC_SOUND_MAPPING)).toBeUndefined()
   })
 })

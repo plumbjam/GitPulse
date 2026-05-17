@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { DEFAULT_FUTURISTIC_SOUND_MAPPING } from '@/audio/musicMapping'
 import { DEFAULT_AUDIO_VOLUME, getMoodDefaultBpm } from '@/audio/moods'
 import { useGitPulseStore } from './useGitPulseStore'
 
@@ -126,6 +127,25 @@ describe('useGitPulseStore audio state', () => {
       currentPlayheadStepIndex: 5,
       currentPlayheadDate: '2026-05-05',
     })
+  })
+
+  it('updates and resets mood-specific sound mappings in memory', () => {
+    expect(useGitPulseStore.getState().soundMappings.futuristic).toEqual(
+      DEFAULT_FUTURISTIC_SOUND_MAPPING,
+    )
+
+    useGitPulseStore.getState().setSoundMapping('futuristic', 'intensity1', 'soft-kick')
+
+    expect(useGitPulseStore.getState().soundMappings.futuristic).toMatchObject({
+      intensity1: 'soft-kick',
+      intensity2: DEFAULT_FUTURISTIC_SOUND_MAPPING.intensity2,
+    })
+
+    useGitPulseStore.getState().resetSoundMappingForMood('futuristic')
+
+    expect(useGitPulseStore.getState().soundMappings.futuristic).toEqual(
+      DEFAULT_FUTURISTIC_SOUND_MAPPING,
+    )
   })
 
   it('stores an OAuth token as the preferred auth mode', () => {

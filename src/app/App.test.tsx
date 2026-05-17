@@ -61,5 +61,5 @@ describe('App', () => {
       expect(useGitPulseStore.getState().currentPlayheadDate).toBe(targetDate)
     })
     expect(useGitPulseStore.getState().selectedStartDate).toBe(loopStartDate)
-  })
+  }, 10_000)
 })

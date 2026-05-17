@@ -22,6 +22,7 @@ import { useGitPulseStore } from '@/store/useGitPulseStore'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
+import { PulseMixerPanel } from './PulseMixerPanel'
 
 type ContributionMediaBarProps = {
   pattern?: GitPulseAudioPattern
@@ -508,6 +509,8 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
           </p>
         </div>
       </div>
+
+      <PulseMixerPanel />
     </div>
   )
 }

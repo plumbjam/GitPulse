@@ -6,19 +6,22 @@ import type {
   GitPulseDataset,
 } from '@/domain/gitpulse.types'
 import { getContributionIntensity } from '@/github/githubContributionMerge'
-import type { GitPulseAudioMood, GitPulseAudioPattern } from './audio.types'
+import type { GitPulseAudioMood, GitPulseAudioPattern, MoodSoundMapping } from './audio.types'
 import { AUDIO_STEPS_PER_BAR } from './moods'
 import {
   mapBassNoteForStep,
   mapIntensityToRhythmFlags,
   mapLeadNoteForStep,
+  mapSoundRoleToRhythmFlags,
   mapStepVelocity,
   resolvePatternBpm,
+  resolveSoundRoleForIntensity,
 } from './musicMapping'
 
 type CreateAudioPatternOptions = {
   mood: GitPulseAudioMood
   bpm?: number
+  soundMapping?: MoodSoundMapping
 }
 
 type SelectContributionRangeOptions = {
@@ -99,7 +102,10 @@ export function createAudioPatternFromCalendar(
   const peakContributionCount = calculatePeakContributionCount(selectedDays)
   const bpm = resolvePatternBpm(options.mood, options.bpm)
   const steps = selectedDays.map((day, index) => {
-    const rhythm = mapIntensityToRhythmFlags(day.intensity)
+    const soundRole = resolveSoundRoleForIntensity(day.intensity, options.soundMapping)
+    const rhythm = soundRole
+      ? mapSoundRoleToRhythmFlags(soundRole)
+      : mapIntensityToRhythmFlags(day.intensity)
 
     return {
       index,
@@ -112,6 +118,7 @@ export function createAudioPatternFromCalendar(
       snare: rhythm.snare,
       hat: rhythm.hat,
       accent: rhythm.accent,
+      soundRole,
       bassNote: mapBassNoteForStep(options.mood, index, day.intensity, day.contributionCount),
       leadNote: mapLeadNoteForStep(options.mood, index, day.intensity, day.contributionCount),
       velocity: mapStepVelocity(day.intensity, day.contributionCount, peakContributionCount),

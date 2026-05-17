@@ -131,6 +131,39 @@ describe('contribution sequencer', () => {
       snare: false,
       hat: false,
       accent: false,
+      soundRole: undefined,
+    })
+  })
+
+  it('attaches mood sound roles for active intensity steps', () => {
+    const calendar = createCalendar([
+      createContributionDay('2026-05-01', 1),
+      createContributionDay('2026-05-02', 3),
+      createContributionDay('2026-05-03', 7),
+      createContributionDay('2026-05-04', 12),
+    ])
+    const pattern = createAudioPatternFromCalendar(calendar, {
+      mood: 'futuristic',
+      bpm: 118,
+      soundMapping: {
+        intensity1: 'soft-kick',
+        intensity2: 'bass-note',
+        intensity3: 'lead-accent',
+        intensity4: 'glitch-burst',
+      },
+    })
+
+    expect(pattern.steps.map((step) => step.soundRole)).toEqual([
+      'soft-kick',
+      'bass-note',
+      'lead-accent',
+      'glitch-burst',
+    ])
+    expect(pattern.steps[0]).toMatchObject({
+      kick: true,
+      snare: false,
+      hat: false,
+      accent: false,
     })
   })
 

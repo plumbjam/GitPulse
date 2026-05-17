@@ -6,6 +6,30 @@ import type { GitPulseMood } from '@/domain/mood.types'
 
 export type GitPulseAudioMood = GitPulseMood
 
+export type SoundRole =
+  | 'soft-kick'
+  | 'pulse-blip'
+  | 'muted-pluck'
+  | 'sub-tick'
+  | 'kick-hat'
+  | 'pulse-hat'
+  | 'bass-note'
+  | 'pluck-pair'
+  | 'kick-snare-hat'
+  | 'bass-clap'
+  | 'lead-accent'
+  | 'chord-stab'
+  | 'accent-crash'
+  | 'tom-fill'
+  | 'bright-lead-hit'
+  | 'glitch-burst'
+
+export type ActivityIntensityKey = 'intensity1' | 'intensity2' | 'intensity3' | 'intensity4'
+
+export type MoodSoundMapping = Record<ActivityIntensityKey, SoundRole>
+
+export type SoundMappingsByMood = Record<GitPulseAudioMood, MoodSoundMapping>
+
 export type AudioPatternStep = {
   index: number
   bar: number
@@ -17,6 +41,7 @@ export type AudioPatternStep = {
   snare: boolean
   hat: boolean
   accent: boolean
+  soundRole?: SoundRole
   bassNote?: string
   leadNote?: string
   velocity: number

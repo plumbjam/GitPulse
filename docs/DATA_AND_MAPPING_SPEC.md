@@ -366,6 +366,22 @@ Stage 3 uses the normalized `intensity` field directly:
 
 The mapping is deterministic for the same normalized dataset and mood settings.
 
+Stage 3.3B adds the Pulse Mixer:
+
+- Pulse Mixer maps activity intensity, not commit, pull request, issue, or review event types;
+- intensity `0` remains a quiet/rest step;
+- intensities `1-4` resolve to mood-specific sound roles;
+- Futuristic defaults are:
+  - `intensity1 -> pulse-blip`
+  - `intensity2 -> kick-hat`
+  - `intensity3 -> kick-snare-hat`
+  - `intensity4 -> bright-lead-hit`
+- mapping settings live in Zustand memory only for now;
+- preview sounds are triggered only by explicit user clicks and do not start the main transport,
+  move the playhead, or change the active media step;
+- other moods currently reuse the Futuristic instrument implementation while keeping their own
+  configurable mappings and BPM defaults.
+
 ### Mood and tempo behavior
 
 - `Futuristic` is the fully tuned Stage 3 sound preset;
@@ -396,6 +412,7 @@ The mapping is deterministic for the same normalized dataset and mood settings.
 - playback can start from the current playhead step and should continue to the final pattern step before looping back to the first active contribution step;
 - `Pause` may be implemented by stopping the Tone transport and preserving playhead state in Zustand;
 - `Stop` must halt the transport, clear scheduled events, reset the media playhead to the first active contribution step, and avoid overlapping replay loops.
+- Tone Transport owns loop behaviour; Tone Sequence should not define an independent loop or loopEnd.
 
 ### Media icon assets
 
@@ -419,7 +436,7 @@ volume.svg
 mute.svg
 ```
 
-`skip-forward.svg` is the forward-facing partner to `skip-back.svg` and should preserve the same viewBox and fill/stroke style. The UI should remain functional with `lucide-react` fallback icons if a custom media SVG is unavailable. The mood-specific sound mapping panel and sound preview buttons remain planned for Stage 3.3B.
+`skip-forward.svg` is the forward-facing partner to `skip-back.svg` and should preserve the same viewBox and fill/stroke style. The UI should remain functional with `lucide-react` fallback icons if a custom media SVG is unavailable.
 
 ---
 
@@ -443,6 +460,7 @@ Stage 3 audio tests should cover:
 - filling missing dates inside a range with quiet steps;
 - sorting dates before sequencing;
 - intensity-to-rhythm mapping;
+- mood-specific Pulse Mixer state and intensity-to-sound-role mapping;
 - dynamic bar calculation from step count;
 - active-step and peak-count calculations;
 - mood default BPM behavior;

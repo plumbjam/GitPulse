@@ -45,6 +45,7 @@ This stage includes:
 - matching contribution grid tile glow while playback advances;
 - active tile auto-follow inside the scrollable contribution grid;
 - media-style transport controls with Reset, Skip Back, Play/Pause, Stop, and Skip Forward;
+- collapsible Pulse Mixer controls for mood-specific activity-intensity sound mapping;
 - default playback start from the first active contribution day, with quiet timelines falling back to step 0;
 - clickable media segments and contribution grid tiles that cue the playhead without autoplay;
 - pause behavior that preserves the current playhead and stop/reset behavior that returns it to the first active contribution day;
@@ -61,7 +62,7 @@ This stage intentionally does not include:
 - AI audio generation;
 - audio export or MIDI export;
 - per-account audio layers;
-- mood-specific sound mapping controls, planned for Stage 3.3B;
+- commit/PR/issue-specific sound mapping, which requires richer event-type data;
 - live R3F scenes;
 - export or share flows.
 
@@ -227,6 +228,7 @@ Stage 3 audio work should preserve:
 - `Stop` resetting the visible media playhead to the first active contribution step;
 - Skip Back and Skip Forward moving exactly one contribution step and clamping safely;
 - mood default BPM unless the user has manually overridden BPM;
+- Pulse Mixer mappings stored in Zustand memory only, with user-triggered previews and no autoplay;
 - safe Play and Stop behavior without duplicate overlapping loops;
 - comfortably audible volume defaults and limiter-backed output;
 - pure audio mapping logic kept separate from the Tone runtime so tests can stay browser-independent.

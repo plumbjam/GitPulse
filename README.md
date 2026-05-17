@@ -27,6 +27,7 @@ Implemented so far:
 - active media segment and matching contribution tile highlighting while the loop plays;
 - active contribution tile auto-follow inside the scrollable grid;
 - safe click-to-play transport with Reset, Skip Back, Play/Pause, Stop, and Skip Forward controls;
+- collapsible Pulse Mixer for mood-specific intensity-to-sound mapping;
 - default playback start from the first active contribution day, falling back to step 0 for quiet timelines;
 - clickable media segments and contribution grid tiles that cue the current playhead without autoplay;
 - pause behavior that stops audible playback while preserving the current playhead for the next Play;
@@ -47,7 +48,6 @@ Not implemented yet:
 - AI audio features;
 - per-account audio layers;
 - audio export, recording, or MIDI output.
-- mood-specific sound mapping controls, which are planned for Stage 3.3B.
 
 ## Stage 3 audio MVP
 
@@ -63,12 +63,15 @@ Current behavior:
 - the media bar shows every audio step from oldest to newest;
 - each bar represents 4 contribution days;
 - contribution intensity drives rhythmic density and accents;
+- Pulse Mixer maps activity intensity to sound roles; it does not claim commit, pull request, or issue-specific audio yet;
 - the merged contribution calendar is the primary rhythm source;
 - if a merged contribution calendar is unavailable, GitPulse falls back to normalized approximate activity data when possible.
 
 Current audio scope:
 
 - one tuned mood: `Futuristic`;
+- Futuristic is the first fully configured Pulse Mixer mapping;
+- other mood labels currently reuse the Futuristic instrument behavior while keeping their own BPM defaults and in-memory mappings;
 - generated synth and drum sounds only;
 - no sample downloads;
 - no AI audio generation;
@@ -155,6 +158,7 @@ It is not true commit history and should be treated as approximate repo activity
 - `Reset` returns the playhead to the first active contribution day;
 - Skip Back and Skip Forward move one contribution day/step and clamp at the timeline ends;
 - clicking a media segment or contribution tile cues the current playhead but does not change the loop start or autoplay.
+- Pulse Mixer previews are user-triggered one-shot sounds and do not start the main transport or move the playhead.
 
 ## Audio controls
 
@@ -164,6 +168,7 @@ It is not true commit history and should be treated as approximate repo activity
 - `Reset BPM` restores the current mood default and clears the user override;
 - user BPM changes update the Tone transport while playing;
 - volume stays in the safe `0-100%` range and maps internally to a louder limiter-protected master gain;
+- Pulse Mixer settings live in Zustand memory only for now;
 - the UI shows the active audio source, timeline origin, loop length, active contribution steps, and current playhead.
 - custom media SVG icons live in `src/assets/icons/media/`; `skip-forward.svg` is mirrored from `skip-back.svg`, and the UI can fall back to `lucide-react` icons if an expected media icon is unavailable.
 
@@ -171,7 +176,8 @@ It is not true commit history and should be treated as approximate repo activity
 
 - only the Futuristic mood is sonically tuned in Stage 3;
 - other mood labels currently reuse the Futuristic engine while keeping their own default BPMs;
-- contribution intensity drives rhythm, but there are no per-account audio layers yet;
+- contribution intensity drives rhythm and sound-role mapping, but richer event-type mapping requires richer GitHub data;
+- there are no per-account audio layers yet;
 - long timelines can create very dense media bars, so individual day segments may become narrow;
 - the visualiser is still a placeholder rather than a live audio-reactive scene.
 

@@ -219,6 +219,32 @@ describe('ContributionMediaBar', () => {
 
     expect(screen.getByLabelText('Pause')).toBeInTheDocument()
   })
+
+  it('renders a collapsible Pulse Mixer for mood-specific sound mapping', async () => {
+    const pattern = createTestPatternFromCounts([0, 1, 2, 3, 4])
+
+    render(<ContributionMediaBar pattern={pattern} />)
+    await waitFor(() => expect(screen.getByLabelText('Play')).toBeInTheDocument())
+
+    const mixerToggle = screen.getByRole('button', { name: /Pulse Mixer/i })
+
+    expect(mixerToggle).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(mixerToggle)
+
+    expect(mixerToggle).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByLabelText('Pulse activity (Intensity 1)')).toBeInTheDocument()
+    expect(screen.getByLabelText('Build activity (Intensity 2)')).toBeInTheDocument()
+    expect(screen.getByLabelText('Surge activity (Intensity 3)')).toBeInTheDocument()
+    expect(screen.getByLabelText('Overload activity (Intensity 4)')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Preview Pulse blip' })).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Pulse activity (Intensity 1)'), {
+      target: { value: 'soft-kick' },
+    })
+
+    expect(useGitPulseStore.getState().soundMappings.futuristic.intensity1).toBe('soft-kick')
+  })
 })
 
 function createTestPattern(dayCount: number) {
