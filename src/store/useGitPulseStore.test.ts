@@ -58,6 +58,8 @@ describe('useGitPulseStore audio state', () => {
     expect(useGitPulseStore.getState()).toMatchObject({
       activeAudioStepIndex: 12,
       activeAudioDate: '2026-04-29',
+      currentPlayheadStepIndex: 12,
+      currentPlayheadDate: '2026-04-29',
     })
 
     useGitPulseStore.getState().resetActiveAudioStep()
@@ -65,6 +67,41 @@ describe('useGitPulseStore audio state', () => {
     expect(useGitPulseStore.getState()).toMatchObject({
       activeAudioStepIndex: null,
       activeAudioDate: undefined,
+    })
+  })
+
+  it('tracks selected start separately from the current playhead', () => {
+    useGitPulseStore.getState().setSelectedStartAndPlayhead(4, '2026-05-04')
+    useGitPulseStore.getState().setCurrentPlayheadStep(7, '2026-05-07')
+
+    expect(useGitPulseStore.getState()).toMatchObject({
+      selectedStartStepIndex: 4,
+      selectedStartDate: '2026-05-04',
+      currentPlayheadStepIndex: 7,
+      currentPlayheadDate: '2026-05-07',
+    })
+
+    useGitPulseStore.getState().resetPlayheadToSelectedStart()
+
+    expect(useGitPulseStore.getState()).toMatchObject({
+      selectedStartStepIndex: 4,
+      selectedStartDate: '2026-05-04',
+      currentPlayheadStepIndex: 4,
+      currentPlayheadDate: '2026-05-04',
+    })
+  })
+
+  it('preserves the current playhead when playback is paused', () => {
+    useGitPulseStore.getState().setSelectedStartAndPlayhead(2, '2026-05-02')
+    useGitPulseStore.getState().setActiveAudioStep(5, '2026-05-05')
+    useGitPulseStore.getState().setAudioPlaying(false)
+
+    expect(useGitPulseStore.getState()).toMatchObject({
+      isAudioPlaying: false,
+      activeAudioStepIndex: null,
+      selectedStartStepIndex: 2,
+      currentPlayheadStepIndex: 5,
+      currentPlayheadDate: '2026-05-05',
     })
   })
 

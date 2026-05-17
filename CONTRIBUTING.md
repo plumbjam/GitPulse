@@ -26,7 +26,7 @@ Please preserve these principles:
 The current completed stage is:
 
 ```text
-Stage 2.6 - GitHub OAuth login via Cloudflare Worker broker
+Stage 3.3A - Media transport controls and playback start position
 ```
 
 This stage includes:
@@ -43,7 +43,12 @@ This stage includes:
 - contribution-linked media bar under the grid with dynamic step counts and active step highlighting;
 - matching contribution grid tile glow while playback advances;
 - active tile auto-follow inside the scrollable contribution grid;
-- click-to-play transport controls with BPM, reset-to-mood-default, and volume;
+- media-style transport controls with Reset, Skip Back, Play/Pause, Stop, and Skip Forward;
+- default playback start from the first active contribution day, with quiet timelines falling back to step 0;
+- clickable media segments and contribution grid tiles that select the playhead without autoplay;
+- pause behavior that preserves the current playhead and stop/reset behavior that returns it to the selected start;
+- one-step skip controls for moving by one contribution day;
+- BPM, reset-to-mood-default, and volume controls in the media bar;
 - Stage 2, 2.5, Stage 3 pure-function tests, and focused audio state/media UI tests.
 
 This stage intentionally does not include:
@@ -55,6 +60,7 @@ This stage intentionally does not include:
 - AI audio generation;
 - audio export or MIDI export;
 - per-account audio layers;
+- mood-specific sound mapping controls, planned for Stage 3.3B;
 - live R3F scenes;
 - export or share flows.
 
@@ -214,11 +220,23 @@ Stage 3 audio work should preserve:
 - dynamic loop bars calculated from the contribution day count;
 - the media bar and Tone runtime sharing the same generated audio pattern;
 - active step callbacks scheduled through Tone's UI-safe draw path when available;
-- `Stop` resetting the visible media playhead to the first playable step;
+- selected playback start defaulting to the first active contribution step, or step 0 when all steps are quiet;
+- media segment and contribution grid tile clicks setting the selected start/playhead without autoplay;
+- `Pause` preserving the current playhead while stopping audible playback;
+- `Stop` resetting the visible media playhead to the selected start;
+- Skip Back and Skip Forward moving exactly one contribution step and clamping safely;
 - mood default BPM unless the user has manually overridden BPM;
 - safe Play and Stop behavior without duplicate overlapping loops;
 - comfortably audible volume defaults and limiter-backed output;
 - pure audio mapping logic kept separate from the Tone runtime so tests can stay browser-independent.
+
+Custom media SVG icons belong in:
+
+```text
+src/assets/icons/media/
+```
+
+`skip-forward.svg` should match the style of `skip-back.svg`; the media controls should keep working with `lucide-react` fallback icons if a custom SVG is unavailable.
 
 ### Privacy rules
 

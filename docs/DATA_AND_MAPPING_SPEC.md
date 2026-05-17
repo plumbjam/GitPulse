@@ -8,7 +8,7 @@ The core rule is:
 
 > UI, audio, and visuals should use normalized GitPulse data, not raw GitHub API responses.
 
-Stage 2.5 adds a merged contribution-calendar layer, and Stage 3.2 now uses that merged calendar as the full-range timing source for both the playable audio engine and the contribution media bar.
+Stage 2.5 adds a merged contribution-calendar layer, and Stage 3.3A uses that merged calendar as the full-range timing source for both the playable audio engine and the selectable contribution media bar.
 
 ---
 
@@ -337,10 +337,18 @@ Stage 3 maps normalized contribution data into a deterministic Tone.js loop with
 
 - `useAudioPattern` should provide the shared pattern used by playback UI and the Tone runtime;
 - the contribution media bar renders the same ordered steps that are passed to the audio engine;
+- the default selected playback start is the first audio step where `contributionCount > 0` or `intensity > 0`;
+- if every step is quiet, the default selected playback start is step `0`;
+- clicking a media segment or contribution grid tile sets the selected start and current playhead without autoplay;
+- Skip Back and Skip Forward move the current playhead by exactly one contribution day/step and clamp at the first and final steps;
+- `Pause` stops audible playback while preserving the current playhead for the next `Play`;
+- `Stop` clears scheduled playback and resets the current playhead to the selected start;
+- `Reset` returns the current playhead to the selected start without changing that selected start;
 - the media bar playhead advances one step at a time through the scheduled `onStep` callback;
 - the main contribution grid may highlight the matching `date` while playback is active;
+- the main contribution grid may separately highlight the selected/current playhead date while stopped;
 - the active grid tile should be brought into view inside the scrollable contribution map while playback is active;
-- stopping playback resets the visible media bar to the first playable step and clears the active grid date.
+- stopping playback clears the active grid date but keeps the selected playhead visible.
 
 ### Rhythm mapping
 
@@ -383,7 +391,33 @@ The mapping is deterministic for the same normalized dataset and mood settings.
 
 - browsers require a user gesture before audio playback;
 - Stage 3 playback starts only after a `Play` click calls `Tone.start()`;
-- `Stop` must halt the transport, clear scheduled events, reset the media playhead, and avoid overlapping replay loops.
+- playback can start from a selected step index and should continue to the final pattern step before looping back to that selected step;
+- `Pause` may be implemented by stopping the Tone transport and preserving playhead state in Zustand;
+- `Stop` must halt the transport, clear scheduled events, reset the media playhead to the selected start, and avoid overlapping replay loops.
+
+### Media icon assets
+
+Stage 3.3A media controls may use custom SVG files from:
+
+```text
+src/assets/icons/media/
+```
+
+Expected filenames include:
+
+```text
+play.svg
+pause.svg
+stop.svg
+skip-back.svg
+skip-forward.svg
+reset-start.svg
+settings.svg
+volume.svg
+mute.svg
+```
+
+`skip-forward.svg` is the forward-facing partner to `skip-back.svg` and should preserve the same viewBox and fill/stroke style. The UI should remain functional with `lucide-react` fallback icons if a custom media SVG is unavailable. The mood-specific sound mapping panel and sound preview buttons remain planned for Stage 3.3B.
 
 ---
 
@@ -412,6 +446,11 @@ Stage 3 audio tests should cover:
 - mood default BPM behavior;
 - user BPM override behavior;
 - active audio step reset behavior;
+- selected start/current playhead behavior;
+- first-active default playback start with quiet-step fallback to step 0;
+- one-step skip clamping at the first and final steps;
+- media segment and contribution tile click-to-select behavior;
+- pause preserving the playhead and stop resetting to the selected start;
 - media bar mapping from audio pattern steps to visible timeline segments.
 
 Existing Stage 2 REST tests and the app smoke test should continue to pass.

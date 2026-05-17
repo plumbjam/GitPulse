@@ -4,9 +4,9 @@
 
 GitPulse is an open-source creative web app that turns one or more GitHub identities into a personalized audio-visual coding signature.
 
-## Stage 2.6 + Stage 3.2 status
+## Stage 2.6 + Stage 3.3A status
 
-Stage 2.6 adds GitHub OAuth login through a Cloudflare Worker broker while preserving the Stage 3.2 full-range playback experience.
+Stage 2.6 adds GitHub OAuth login through a Cloudflare Worker broker while Stage 3.3A adds media-style transport controls and selectable playback start positions.
 
 Implemented so far:
 
@@ -24,7 +24,12 @@ Implemented so far:
 - contribution media bar directly under the grid, using the same dynamic pattern as playback;
 - active media segment and matching contribution tile highlighting while the loop plays;
 - active contribution tile auto-follow inside the scrollable grid;
-- safe click-to-play transport with Play and Stop controls;
+- safe click-to-play transport with Reset, Skip Back, Play/Pause, Stop, and Skip Forward controls;
+- default playback start from the first active contribution day, falling back to step 0 for quiet timelines;
+- clickable media segments and contribution grid tiles that set the selected playhead without autoplay;
+- pause behavior that stops audible playback while preserving the current playhead for the next Play;
+- stop/reset behavior that returns the playhead to the selected start;
+- one-step skip controls for moving by one contribution day;
 - mood-aware BPM defaults with a user BPM override and reset-to-default control;
 - louder practical master volume with limiter protection;
 - unit tests for REST normalization, repo merge logic, contribution calendar logic, audio state, media timeline mapping, and pure audio mapping helpers.
@@ -40,6 +45,7 @@ Not implemented yet:
 - AI audio features;
 - per-account audio layers;
 - audio export, recording, or MIDI output.
+- mood-specific sound mapping controls, which are planned for Stage 3.3B.
 
 ## Stage 3 audio MVP
 
@@ -49,6 +55,7 @@ Current behavior:
 
 - no audio starts automatically;
 - the user must click `Play`, which then resumes the browser audio context before playback starts;
+- playback starts from the selected playhead, which defaults to the first active contribution day;
 - playback loop length is calculated from the available contribution day count;
 - one contribution day maps to one quarter-note step;
 - the media bar shows every audio step from oldest to newest;
@@ -140,8 +147,12 @@ It is not true commit history and should be treated as approximate repo activity
 
 - browsers block autoplay, so playback begins only after an explicit `Play` click;
 - GitPulse calls `Tone.start()` only from that user gesture path;
-- repeated `Play` and `Stop` interactions reuse the transport safely and avoid overlapping duplicate loops;
-- `Stop` resets the visible media timeline back to the first playable step.
+- repeated transport interactions reuse the Tone transport safely and avoid overlapping duplicate loops;
+- `Pause` stops the audible Tone transport but preserves the current playhead, so the next `Play` starts from that step;
+- `Stop` clears scheduled playback and resets the visible media timeline back to the selected start;
+- `Reset` returns the playhead to the selected start without changing the selected start;
+- Skip Back and Skip Forward move one contribution day/step and clamp at the timeline ends;
+- clicking a media segment or contribution tile sets the selected start/playhead but does not autoplay.
 
 ## Audio controls
 
@@ -152,6 +163,7 @@ It is not true commit history and should be treated as approximate repo activity
 - user BPM changes update the Tone transport while playing;
 - volume stays in the safe `0-100%` range and maps internally to a louder limiter-protected master gain;
 - the UI shows the active audio source, timeline origin, loop length, active contribution steps, and current playhead.
+- custom media SVG icons live in `src/assets/icons/media/`; `skip-forward.svg` is mirrored from `skip-back.svg`, and the UI can fall back to `lucide-react` icons if an expected media icon is unavailable.
 
 ## Known limitations
 

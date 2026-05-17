@@ -52,6 +52,10 @@ type GitPulseState = {
   isAudioPlaying: boolean
   audioError?: string
   hasUserTempoOverride: boolean
+  selectedStartStepIndex: number
+  selectedStartDate?: string
+  currentPlayheadStepIndex: number
+  currentPlayheadDate?: string
   activeAudioStepIndex: number | null
   activeAudioDate?: string
   setMood: (mood: GitPulseMood) => void
@@ -74,6 +78,11 @@ type GitPulseState = {
   setIntensity: (intensity: number) => void
   setAudioPlaying: (isPlaying: boolean) => void
   setAudioError: (message?: string) => void
+  setSelectedStartStep: (index: number, date?: string) => void
+  setCurrentPlayheadStep: (index: number, date?: string) => void
+  setSelectedStartAndPlayhead: (index: number, date?: string) => void
+  resetPlayheadToSelectedStart: () => void
+  skipPlayhead: (delta: -1 | 1, maxIndex: number, nextDate?: string) => void
   setActiveAudioStep: (index: number, date?: string) => void
   resetActiveAudioStep: () => void
 }
@@ -100,6 +109,10 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
   isAudioPlaying: false,
   audioError: undefined,
   hasUserTempoOverride: false,
+  selectedStartStepIndex: 0,
+  selectedStartDate: undefined,
+  currentPlayheadStepIndex: 0,
+  currentPlayheadDate: undefined,
   activeAudioStepIndex: null,
   activeAudioDate: undefined,
   setMood: (mood) =>
@@ -142,6 +155,8 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
         isFetchingContributions: false,
         audioError: undefined,
         contributionFetchError: undefined,
+        activeAudioStepIndex: null,
+        activeAudioDate: undefined,
       }
     }),
   setOAuthToken: (oauthAccessToken, metadata) => {
@@ -188,6 +203,8 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
             : createEmptyGitPulseDataset('live')
           : state.dataset,
         isAudioPlaying: false,
+        activeAudioStepIndex: null,
+        activeAudioDate: undefined,
         contributionFetchError: undefined,
       }
     })
@@ -306,6 +323,8 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
               ? resolvedDataset.identity.errorMessage
               : undefined,
           isAudioPlaying: false,
+          activeAudioStepIndex: null,
+          activeAudioDate: undefined,
           contributionFetchError,
           identityErrors: buildIdentityErrors(nextIdentityDatasets),
         }
@@ -339,6 +358,8 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
           isFetching: nextIdentityDatasets.some((dataset) => dataset.identity.status === 'loading'),
           fetchError: fallbackDataset.identity.errorMessage,
           isAudioPlaying: false,
+          activeAudioStepIndex: null,
+          activeAudioDate: undefined,
           contributionFetchError: undefined,
           identityErrors: buildIdentityErrors(nextIdentityDatasets),
         }
@@ -372,6 +393,8 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
           isFetchingContributions: false,
           audioError: undefined,
           contributionFetchError: undefined,
+          activeAudioStepIndex: null,
+          activeAudioDate: undefined,
         }
       })
       return
@@ -426,6 +449,8 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
         isFetchingContributions: false,
         audioError: undefined,
         contributionFetchError: buildContributionFetchError(contributionResults),
+        activeAudioStepIndex: null,
+        activeAudioDate: undefined,
       }
     })
   },
@@ -448,6 +473,12 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
         fetchError: undefined,
         contributionFetchError: undefined,
         identityErrors: buildIdentityErrors(nextIdentityDatasets),
+        selectedStartStepIndex: 0,
+        selectedStartDate: undefined,
+        currentPlayheadStepIndex: 0,
+        currentPlayheadDate: undefined,
+        activeAudioStepIndex: null,
+        activeAudioDate: undefined,
       }
     }),
   loadDemoDataset: () => {
@@ -464,6 +495,12 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       contributionFetchError: undefined,
       identityErrors: {},
       draftUsername: '',
+      selectedStartStepIndex: 0,
+      selectedStartDate: undefined,
+      currentPlayheadStepIndex: 0,
+      currentPlayheadDate: undefined,
+      activeAudioStepIndex: null,
+      activeAudioDate: undefined,
     })
   },
   clearDataset: () =>
@@ -478,6 +515,12 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       contributionFetchError: undefined,
       identityErrors: {},
       draftUsername: '',
+      selectedStartStepIndex: 0,
+      selectedStartDate: undefined,
+      currentPlayheadStepIndex: 0,
+      currentPlayheadDate: undefined,
+      activeAudioStepIndex: null,
+      activeAudioDate: undefined,
     }),
   setTempo: (tempo) =>
     set({
@@ -497,10 +540,49 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       ...(isAudioPlaying ? {} : { activeAudioStepIndex: null, activeAudioDate: undefined }),
     }),
   setAudioError: (audioError) => set({ audioError }),
+  setSelectedStartStep: (selectedStartStepIndex, selectedStartDate) =>
+    set({
+      selectedStartStepIndex: Math.max(0, selectedStartStepIndex),
+      selectedStartDate,
+    }),
+  setCurrentPlayheadStep: (currentPlayheadStepIndex, currentPlayheadDate) =>
+    set({
+      currentPlayheadStepIndex: Math.max(0, currentPlayheadStepIndex),
+      currentPlayheadDate,
+    }),
+  setSelectedStartAndPlayhead: (selectedStartStepIndex, selectedStartDate) =>
+    set({
+      selectedStartStepIndex: Math.max(0, selectedStartStepIndex),
+      selectedStartDate,
+      currentPlayheadStepIndex: Math.max(0, selectedStartStepIndex),
+      currentPlayheadDate: selectedStartDate,
+      isAudioPlaying: false,
+      activeAudioStepIndex: null,
+      activeAudioDate: undefined,
+      audioError: undefined,
+    }),
+  resetPlayheadToSelectedStart: () =>
+    set((state) => ({
+      currentPlayheadStepIndex: state.selectedStartStepIndex,
+      currentPlayheadDate: state.selectedStartDate,
+      activeAudioStepIndex: null,
+      activeAudioDate: undefined,
+    })),
+  skipPlayhead: (delta, maxIndex, nextDate) =>
+    set((state) => {
+      const nextStepIndex = clamp(state.currentPlayheadStepIndex + delta, 0, Math.max(0, maxIndex))
+
+      return {
+        currentPlayheadStepIndex: nextStepIndex,
+        currentPlayheadDate: nextDate,
+      }
+    }),
   setActiveAudioStep: (activeAudioStepIndex, activeAudioDate) =>
     set({
       activeAudioStepIndex,
       activeAudioDate,
+      currentPlayheadStepIndex: activeAudioStepIndex,
+      currentPlayheadDate: activeAudioDate,
     }),
   resetActiveAudioStep: () =>
     set({

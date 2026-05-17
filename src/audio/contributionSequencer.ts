@@ -70,6 +70,20 @@ export function calculateAudioLoopBars(stepCount: number) {
   return Math.ceil(stepCount / AUDIO_STEPS_PER_BAR)
 }
 
+export function findFirstActiveStepIndex(
+  steps: Array<Pick<GitPulseAudioPattern['steps'][number], 'contributionCount' | 'intensity'>>,
+) {
+  const firstActiveStepIndex = steps.findIndex(
+    (step) => step.contributionCount > 0 || step.intensity > 0,
+  )
+
+  return firstActiveStepIndex >= 0 ? firstActiveStepIndex : 0
+}
+
+export function clampStepIndex(index: number, maxIndex: number) {
+  return clamp(Math.round(index), 0, Math.max(0, maxIndex))
+}
+
 export function createAudioPatternFromCalendar(
   calendar: GitPulseContributionCalendar,
   options: CreateAudioPatternOptions & {

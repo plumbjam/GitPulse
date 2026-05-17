@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import {
   exchangeGitHubOAuthCode,
   getGitHubOAuthRuntimeConfig,
@@ -25,6 +25,7 @@ export function AppShell() {
   const tempo = useGitPulseStore((state) => state.tempo)
   const isAudioPlaying = useGitPulseStore((state) => state.isAudioPlaying)
   const activeAudioDate = useGitPulseStore((state) => state.activeAudioDate)
+  const currentPlayheadDate = useGitPulseStore((state) => state.currentPlayheadDate)
   const loadOAuthSessionFromStorage = useGitPulseStore((state) => state.loadOAuthSessionFromStorage)
   const refreshContributionCalendars = useGitPulseStore(
     (state) => state.refreshContributionCalendars,
@@ -32,9 +33,23 @@ export function AppShell() {
   const setOAuthError = useGitPulseStore((state) => state.setOAuthError)
   const setOAuthStatus = useGitPulseStore((state) => state.setOAuthStatus)
   const setOAuthToken = useGitPulseStore((state) => state.setOAuthToken)
+  const setSelectedStartAndPlayhead = useGitPulseStore((state) => state.setSelectedStartAndPlayhead)
   const contributionCalendar = dataset.contributionCalendar
   const audioPattern = useAudioPattern(dataset, mood, tempo)
   const hasProcessedOAuthCallback = useRef(false)
+
+  const handleSelectContributionDate = useCallback(
+    (date: string) => {
+      const stepIndex = audioPattern?.steps.findIndex((step) => step.date === date) ?? -1
+
+      if (stepIndex < 0) {
+        return
+      }
+
+      setSelectedStartAndPlayhead(stepIndex, date)
+    },
+    [audioPattern, setSelectedStartAndPlayhead],
+  )
 
   useEffect(() => {
     loadOAuthSessionFromStorage()
@@ -118,6 +133,8 @@ export function AppShell() {
           <ContributionSignalGrid
             activeDate={isAudioPlaying ? activeAudioDate : undefined}
             calendar={contributionCalendar}
+            onSelectDate={handleSelectContributionDate}
+            selectedDate={currentPlayheadDate}
             mediaBar={<ContributionMediaBar pattern={audioPattern} />}
           />
           <InsightPanel />

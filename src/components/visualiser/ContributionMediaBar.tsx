@@ -1,15 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   AlertCircle,
   Gauge,
   LoaderCircle,
+  Pause,
   Play,
   RotateCcw,
+  SkipBack,
+  SkipForward,
   Square,
   Volume2,
   Waves,
+  type LucideIcon,
 } from 'lucide-react'
 import { gitPulseAudioEngine } from '@/audio/audioEngine'
+import { clampStepIndex, findFirstActiveStepIndex } from '@/audio/contributionSequencer'
 import type { AudioPatternStep, GitPulseAudioPattern } from '@/audio/audio.types'
 import { AUDIO_BPM_RANGE, getMoodDefaultBpm } from '@/audio/moods'
 import { cn } from '@/lib-utils'
@@ -22,8 +27,26 @@ type ContributionMediaBarProps = {
   pattern?: GitPulseAudioPattern
 }
 
+type MediaIconName = 'play' | 'pause' | 'stop' | 'skip-back' | 'skip-forward' | 'reset-start'
+
+const EMPTY_AUDIO_STEPS: AudioPatternStep[] = []
+const mediaIconModules = import.meta.glob('/src/assets/icons/media/*.svg', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+}) as Record<string, string>
+const mediaIconPathByName: Record<MediaIconName, string> = {
+  play: '/src/assets/icons/media/play.svg',
+  pause: '/src/assets/icons/media/pause.svg',
+  stop: '/src/assets/icons/media/stop.svg',
+  'skip-back': '/src/assets/icons/media/skip-back.svg',
+  'skip-forward': '/src/assets/icons/media/skip-forward.svg',
+  'reset-start': '/src/assets/icons/media/reset-start.svg',
+}
+
 export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
   const [isPreparing, setIsPreparing] = useState(false)
+  const lastTimelineKeyRef = useRef<string | undefined>(undefined)
   const {
     mood,
     tempo,
@@ -33,30 +56,79 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
     isAudioPlaying,
     audioError,
     hasUserTempoOverride,
+    selectedStartStepIndex,
+    currentPlayheadStepIndex,
     activeAudioStepIndex,
     setTempo,
     resetTempoToMoodDefault,
     setVolume,
     setAudioPlaying,
     setAudioError,
+    setSelectedStartAndPlayhead,
+    setCurrentPlayheadStep,
+    resetPlayheadToSelectedStart,
     setActiveAudioStep,
     resetActiveAudioStep,
   } = useGitPulseStore()
-  const patternSteps = pattern?.steps ?? []
+  const patternSteps = pattern?.steps ?? EMPTY_AUDIO_STEPS
   const patternStepCount = patternSteps.length
+  const maxStepIndex = Math.max(0, patternStepCount - 1)
+  const timelineKey = useMemo(
+    () =>
+      patternSteps
+        .map((step) => `${step.date ?? step.index}:${step.contributionCount}:${step.intensity}`)
+        .join('|'),
+    [patternSteps],
+  )
   const moodDefaultBpm = getMoodDefaultBpm(mood)
-  const canPlay = patternStepCount > 0 && !isPreparing && !isAudioPlaying
-  const displayStepIndex =
+  const selectedStepIndex = clampStepIndex(selectedStartStepIndex, maxStepIndex)
+  const playheadStepIndex = clampStepIndex(currentPlayheadStepIndex, maxStepIndex)
+  const activeStepIndex =
     patternStepCount > 0 && isAudioPlaying && activeAudioStepIndex !== null
-      ? Math.min(activeAudioStepIndex, patternStepCount - 1)
-      : 0
+      ? clampStepIndex(activeAudioStepIndex, maxStepIndex)
+      : undefined
+  const displayStepIndex = activeStepIndex ?? playheadStepIndex
   const activeStep = patternSteps[displayStepIndex]
-  const transportStatusLabel = isPreparing ? 'Starting' : isAudioPlaying ? 'Playing' : 'Ready'
+  const selectedStep = patternSteps[selectedStepIndex]
+  const canUseTransport = patternStepCount > 0 && !isPreparing
+  const canStop =
+    patternStepCount > 0 &&
+    !isPreparing &&
+    (isAudioPlaying || playheadStepIndex !== selectedStepIndex)
+  const isAtFirstStep = playheadStepIndex <= 0
+  const isAtFinalStep = patternStepCount === 0 || playheadStepIndex >= maxStepIndex
+  const transportStatusLabel = isPreparing
+    ? 'Starting'
+    : isAudioPlaying
+      ? 'Playing'
+      : playheadStepIndex !== selectedStepIndex
+        ? 'Paused'
+        : 'Ready'
   const audioSourceLabel = pattern
     ? pattern.summary.source === 'approximate'
       ? 'Approximate activity fallback'
       : 'Contribution calendar'
     : 'Awaiting data'
+
+  useEffect(() => {
+    if (!patternStepCount) {
+      if (lastTimelineKeyRef.current !== undefined) {
+        setSelectedStartAndPlayhead(0)
+        lastTimelineKeyRef.current = undefined
+      }
+      return
+    }
+
+    if (lastTimelineKeyRef.current === timelineKey) {
+      return
+    }
+
+    const defaultStartStepIndex = findFirstActiveStepIndex(patternSteps)
+    const defaultStartStep = patternSteps[defaultStartStepIndex]
+
+    setSelectedStartAndPlayhead(defaultStartStepIndex, defaultStartStep?.date)
+    lastTimelineKeyRef.current = timelineKey
+  }, [patternStepCount, patternSteps, setSelectedStartAndPlayhead, timelineKey])
 
   useEffect(() => {
     gitPulseAudioEngine.setBpm(tempo)
@@ -72,15 +144,6 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
     }
   }, [isAudioPlaying])
 
-  useEffect(() => {
-    if (patternStepCount > 0 || !isAudioPlaying) {
-      return
-    }
-
-    setAudioPlaying(false)
-    resetActiveAudioStep()
-  }, [isAudioPlaying, patternStepCount, resetActiveAudioStep, setAudioPlaying])
-
   useEffect(
     () => () => {
       gitPulseAudioEngine.stop()
@@ -94,13 +157,20 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
       return
     }
 
+    const startStepIndex = clampStepIndex(currentPlayheadStepIndex, maxStepIndex)
+    const loopStartStepIndex = clampStepIndex(selectedStartStepIndex, maxStepIndex)
+    const startStep = patternSteps[startStepIndex]
+
     setIsPreparing(true)
     setAudioError(undefined)
-    setActiveAudioStep(0, patternSteps[0]?.date)
+    setCurrentPlayheadStep(startStepIndex, startStep?.date)
+    setActiveAudioStep(startStepIndex, startStep?.date)
 
     try {
       await gitPulseAudioEngine.play(pattern, {
         volume,
+        startStepIndex,
+        loopStartStepIndex,
         onStep: (stepIndex, step) => {
           setActiveAudioStep(stepIndex, step.date)
         },
@@ -117,10 +187,52 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
     }
   }
 
-  function handleStop() {
+  function handlePause() {
+    gitPulseAudioEngine.stop()
     setAudioError(undefined)
     setAudioPlaying(false)
     resetActiveAudioStep()
+  }
+
+  function handleStop() {
+    gitPulseAudioEngine.stop()
+    setAudioError(undefined)
+    setAudioPlaying(false)
+    resetPlayheadToSelectedStart()
+  }
+
+  function handleResetToStart() {
+    gitPulseAudioEngine.stop()
+    setAudioError(undefined)
+    setAudioPlaying(false)
+    resetPlayheadToSelectedStart()
+  }
+
+  function handleSkip(delta: -1 | 1) {
+    if (!patternStepCount) {
+      return
+    }
+
+    const nextStepIndex = clampStepIndex(playheadStepIndex + delta, maxStepIndex)
+    const nextStep = patternSteps[nextStepIndex]
+
+    gitPulseAudioEngine.stop()
+    setAudioError(undefined)
+    setAudioPlaying(false)
+    resetActiveAudioStep()
+    setCurrentPlayheadStep(nextStepIndex, nextStep?.date)
+  }
+
+  function handleSelectStep(index: number) {
+    if (!patternStepCount) {
+      return
+    }
+
+    const nextStepIndex = clampStepIndex(index, maxStepIndex)
+    const nextStep = patternSteps[nextStepIndex]
+
+    gitPulseAudioEngine.stop()
+    setSelectedStartAndPlayhead(nextStepIndex, nextStep?.date)
   }
 
   return (
@@ -146,23 +258,78 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[auto_minmax(0,1fr)]">
-        <div className="flex flex-wrap items-center gap-2 xl:flex-col xl:items-stretch">
-          <Button onClick={() => void handlePlay()} disabled={!canPlay} size="sm">
-            {isPreparing ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <Play className="h-4 w-4" aria-hidden />
-            )}
-            Play
-          </Button>
+      <div className="space-y-3">
+        <div
+          className="flex flex-wrap items-center gap-2"
+          role="group"
+          aria-label="Audio transport controls"
+        >
           <Button
-            onClick={handleStop}
-            disabled={!isAudioPlaying || isPreparing}
+            aria-label="Reset to start"
+            className="h-9 w-9 p-0"
+            disabled={
+              !canUseTransport || (playheadStepIndex === selectedStepIndex && !isAudioPlaying)
+            }
+            onClick={handleResetToStart}
             size="sm"
+            title="Reset to start"
+            type="button"
             variant="outline"
           >
-            <Square className="h-4 w-4" aria-hidden /> Stop
+            <MediaControlIcon fallback={RotateCcw} name="reset-start" />
+          </Button>
+          <Button
+            aria-label="Skip back one contribution day"
+            className="h-9 w-9 p-0"
+            disabled={!canUseTransport || isAtFirstStep}
+            onClick={() => handleSkip(-1)}
+            size="sm"
+            title="Skip back one contribution day"
+            type="button"
+            variant="outline"
+          >
+            <MediaControlIcon fallback={SkipBack} name="skip-back" />
+          </Button>
+          <Button
+            aria-label={isAudioPlaying ? 'Pause' : 'Play'}
+            className="h-9 w-9 p-0"
+            disabled={!canUseTransport}
+            onClick={() => (isAudioPlaying ? handlePause() : void handlePlay())}
+            size="sm"
+            title={isAudioPlaying ? 'Pause' : 'Play'}
+            type="button"
+          >
+            {isPreparing ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+            ) : isAudioPlaying ? (
+              <MediaControlIcon fallback={Pause} name="pause" />
+            ) : (
+              <MediaControlIcon fallback={Play} name="play" />
+            )}
+          </Button>
+          <Button
+            aria-label="Stop"
+            className="h-9 w-9 p-0"
+            disabled={!canStop}
+            onClick={handleStop}
+            size="sm"
+            title="Stop"
+            type="button"
+            variant="outline"
+          >
+            <MediaControlIcon fallback={Square} name="stop" />
+          </Button>
+          <Button
+            aria-label="Skip forward one contribution day"
+            className="h-9 w-9 p-0"
+            disabled={!canUseTransport || isAtFinalStep}
+            onClick={() => handleSkip(1)}
+            size="sm"
+            title="Skip forward one contribution day"
+            type="button"
+            variant="outline"
+          >
+            <MediaControlIcon fallback={SkipForward} name="skip-forward" />
           </Button>
         </div>
 
@@ -178,21 +345,29 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
             }}
           >
             {patternSteps.map((step, index) => {
-              const isActive = index === displayStepIndex
+              const isActive = index === activeStepIndex
+              const isPlayhead = index === playheadStepIndex
+              const isSelectedStart = index === selectedStepIndex
 
               return (
-                <span
-                  key={step.date ?? `empty-step-${index}`}
-                  role="listitem"
-                  title={buildStepTitle(step, index)}
-                  aria-label={buildStepTitle(step, index)}
-                  className={cn(
-                    'min-w-0 rounded-[2px] border transition-[background-color,border-color,box-shadow,transform] duration-150',
-                    getMediaSegmentClassName(step.intensity),
-                    isActive &&
-                      'scale-y-110 border-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.7),0_0_28px_rgba(168,85,247,0.45)]',
-                  )}
-                />
+                <span key={step.date ?? `empty-step-${index}`} role="listitem" className="min-w-0">
+                  <button
+                    type="button"
+                    title={buildStepTitle(step, index)}
+                    aria-label={buildStepSelectionLabel(step, index)}
+                    onClick={() => handleSelectStep(index)}
+                    className={cn(
+                      'h-full w-full min-w-0 appearance-none rounded-[2px] border p-0 transition-[background-color,border-color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200',
+                      getMediaSegmentClassName(step.intensity),
+                      isSelectedStart &&
+                        'ring-1 ring-emerald-300/80 ring-offset-1 ring-offset-slate-950',
+                      isPlayhead &&
+                        'scale-y-105 border-cyan-100/80 shadow-[0_0_12px_rgba(34,211,238,0.48)]',
+                      isActive &&
+                        'scale-y-110 border-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.7),0_0_28px_rgba(168,85,247,0.45)]',
+                    )}
+                  />
+                </span>
               )
             })}
           </div>
@@ -203,6 +378,12 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
                 )} - ${activeStep.contributionCount} contributions`
               : 'No audio pattern is ready yet.'}
           </p>
+          {selectedStep ? (
+            <p className="text-xs text-muted-foreground">
+              Start: Step {selectedStepIndex + 1}/{patternStepCount} -{' '}
+              {formatSingleDate(selectedStep.date)}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -227,6 +408,7 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
               onClick={resetTempoToMoodDefault}
               disabled={!hasUserTempoOverride && tempo === moodDefaultBpm}
               size="sm"
+              type="button"
               variant="outline"
             >
               <RotateCcw className="h-4 w-4" aria-hidden />
@@ -271,6 +453,33 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
   )
 }
 
+function MediaControlIcon({
+  fallback: Fallback,
+  name,
+}: {
+  fallback: LucideIcon
+  name: MediaIconName
+}) {
+  const iconUrl = mediaIconModules[mediaIconPathByName[name]]
+
+  if (iconUrl) {
+    return (
+      <span aria-hidden className="block h-4 w-4 bg-current" style={buildIconMaskStyle(iconUrl)} />
+    )
+  }
+
+  return <Fallback className="h-4 w-4" aria-hidden />
+}
+
+function buildIconMaskStyle(iconUrl: string): CSSProperties {
+  const mask = `url("${iconUrl}") center / contain no-repeat`
+
+  return {
+    WebkitMask: mask,
+    mask,
+  }
+}
+
 function getMediaSegmentClassName(intensity: number) {
   const classNameByIntensity = {
     0: 'border-cyan-400/10 bg-slate-950/80 shadow-[0_0_0_1px_rgba(15,23,42,0.4)]',
@@ -291,6 +500,16 @@ function buildStepTitle(step: AudioPatternStep | undefined, index: number) {
   return `Step ${index + 1}\n${formatSingleDate(step.date)}\n${
     step.contributionCount
   } contributions\nBar ${step.bar}, beat ${step.beat}`
+}
+
+function buildStepSelectionLabel(step: AudioPatternStep | undefined, index: number) {
+  if (!step) {
+    return `Select audio step ${index + 1}`
+  }
+
+  return `Select audio step ${index + 1}: ${formatSingleDate(step.date)}, ${
+    step.contributionCount
+  } contributions`
 }
 
 function formatStepCount(stepCount: number) {

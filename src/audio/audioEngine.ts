@@ -15,6 +15,8 @@ type ToneModuleWithDraw = ToneModule & {
 
 type PlayOptions = {
   volume: number
+  startStepIndex?: number
+  loopStartStepIndex?: number
   onStep?: (stepIndex: number, step: AudioPatternStep) => void
 }
 
@@ -39,7 +41,15 @@ class GitPulseAudioEngine {
     await this.ensureInstrumentRack(pattern.mood)
     this.applyBpm()
     this.applyVolume()
-    this.schedulePattern(pattern, options.onStep, playbackToken)
+    this.schedulePattern(
+      pattern,
+      {
+        startStepIndex: options.startStepIndex ?? 0,
+        loopStartStepIndex: options.loopStartStepIndex ?? options.startStepIndex ?? 0,
+      },
+      options.onStep,
+      playbackToken,
+    )
 
     Tone.Transport.start()
   }
@@ -114,6 +124,10 @@ class GitPulseAudioEngine {
 
   private schedulePattern(
     pattern: GitPulseAudioPattern,
+    position: {
+      startStepIndex: number
+      loopStartStepIndex: number
+    },
     onStep: PlayOptions['onStep'],
     playbackToken: number,
   ) {
@@ -122,12 +136,18 @@ class GitPulseAudioEngine {
     }
 
     const Tone = this.tone
+    const finalStepIndex = Math.max(0, pattern.steps.length - 1)
+    const startStepIndex = clampStepIndex(position.startStepIndex, finalStepIndex)
+    const loopStartStepIndex = clampStepIndex(position.loopStartStepIndex, finalStepIndex)
+    const stepDuration = Tone.Time('4n').toSeconds()
+    const startOffset = startStepIndex * stepDuration
+    const loopStart = loopStartStepIndex * stepDuration
     const loopEnd = Tone.Time(`${pattern.loopBars}m`).toSeconds()
 
     Tone.Transport.loop = true
-    Tone.Transport.loopStart = 0
+    Tone.Transport.loopStart = loopStart
     Tone.Transport.loopEnd = loopEnd
-    Tone.Transport.seconds = 0
+    Tone.Transport.seconds = startOffset
 
     this.sequence = new Tone.Sequence(
       (time, step) => {
@@ -245,6 +265,10 @@ class GitPulseAudioEngine {
 
     setMasterVolume(this.instrumentRack, mapVolumePercentToDecibels(this.currentVolume))
   }
+}
+
+function clampStepIndex(index: number, maxIndex: number) {
+  return Math.min(Math.max(0, maxIndex), Math.max(0, Math.round(index)))
 }
 
 export const gitPulseAudioEngine = new GitPulseAudioEngine()

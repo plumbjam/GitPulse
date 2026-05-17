@@ -6,6 +6,8 @@ import { Card } from '@/components/ui/card'
 type ContributionSignalGridProps = {
   calendar?: GitPulseContributionCalendar
   activeDate?: string
+  selectedDate?: string
+  onSelectDate?: (date: string) => void
   mediaBar?: ReactNode
 }
 
@@ -21,6 +23,8 @@ const CONTRIBUTION_LEGEND = [
 export function ContributionSignalGrid({
   activeDate,
   calendar,
+  selectedDate,
+  onSelectDate,
   mediaBar,
 }: ContributionSignalGridProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -95,9 +99,9 @@ export function ContributionSignalGrid({
       <div ref={scrollContainerRef} className="overflow-x-auto">
         <div className="flex min-w-max gap-3">
           <div className="mt-1 grid grid-rows-7 gap-1 text-[10px] text-muted-foreground">
-            {WEEKDAY_LABELS.map((label) => (
+            {WEEKDAY_LABELS.map((label, index) => (
               <span
-                key={label}
+                key={`${label}-${index}`}
                 className="flex h-3 items-center justify-center leading-none"
                 aria-hidden
               >
@@ -110,18 +114,36 @@ export function ContributionSignalGrid({
               <div key={`${week[0]?.date ?? 'empty'}-${index}`} className="grid grid-rows-7 gap-1">
                 {week.map((day, dayIndex) =>
                   day ? (
-                    <div
-                      key={day.date}
-                      role="img"
-                      tabIndex={0}
-                      title={buildContributionTitle(day)}
-                      aria-label={buildContributionTitle(day)}
-                      data-date={day.date}
-                      className={getContributionCellClassName(
-                        day.intensity,
-                        day.date === activeDate,
-                      )}
-                    />
+                    onSelectDate ? (
+                      <button
+                        key={day.date}
+                        type="button"
+                        title={buildContributionTitle(day)}
+                        aria-label={buildContributionSelectionLabel(day)}
+                        aria-pressed={day.date === selectedDate}
+                        data-date={day.date}
+                        onClick={() => onSelectDate(day.date)}
+                        className={getContributionCellClassName(
+                          day.intensity,
+                          day.date === activeDate,
+                          day.date === selectedDate,
+                        )}
+                      />
+                    ) : (
+                      <div
+                        key={day.date}
+                        role="img"
+                        tabIndex={0}
+                        title={buildContributionTitle(day)}
+                        aria-label={buildContributionTitle(day)}
+                        data-date={day.date}
+                        className={getContributionCellClassName(
+                          day.intensity,
+                          day.date === activeDate,
+                          day.date === selectedDate,
+                        )}
+                      />
+                    )
                   ) : (
                     <span
                       key={`blank-${index}-${dayIndex}`}
@@ -187,18 +209,27 @@ function buildContributionTitle(day: GitPulseContributionDay) {
   }`
 }
 
-function getContributionCellClassName(intensity: number, isActive = false) {
+function buildContributionSelectionLabel(day: GitPulseContributionDay) {
+  return `Select contribution day ${formatSingleDate(day.date)}, ${
+    day.contributionCount
+  } contributions`
+}
+
+function getContributionCellClassName(intensity: number, isActive = false, isSelected = false) {
   const classNameByIntensity = {
-    0: 'h-3 w-3 rounded-[3px] border border-cyan-400/10 bg-slate-950/80 shadow-[0_0_0_1px_rgba(15,23,42,0.4)]',
-    1: 'h-3 w-3 rounded-[3px] border border-cyan-300/30 bg-cyan-400/25 shadow-[0_0_8px_rgba(34,211,238,0.18)]',
-    2: 'h-3 w-3 rounded-[3px] border border-cyan-200/40 bg-cyan-300/45 shadow-[0_0_10px_rgba(103,232,249,0.2)]',
-    3: 'h-3 w-3 rounded-[3px] border border-violet-300/50 bg-violet-400/60 shadow-[0_0_12px_rgba(167,139,250,0.28)]',
-    4: 'h-3 w-3 rounded-[3px] border border-fuchsia-200/60 bg-fuchsia-400/80 shadow-[0_0_14px_rgba(232,121,249,0.35)]',
+    0: 'border-cyan-400/10 bg-slate-950/80 shadow-[0_0_0_1px_rgba(15,23,42,0.4)]',
+    1: 'border-cyan-300/30 bg-cyan-400/25 shadow-[0_0_8px_rgba(34,211,238,0.18)]',
+    2: 'border-cyan-200/40 bg-cyan-300/45 shadow-[0_0_10px_rgba(103,232,249,0.2)]',
+    3: 'border-violet-300/50 bg-violet-400/60 shadow-[0_0_12px_rgba(167,139,250,0.28)]',
+    4: 'border-fuchsia-200/60 bg-fuchsia-400/80 shadow-[0_0_14px_rgba(232,121,249,0.35)]',
   } as const
 
   return cn(
+    'h-3 w-3 appearance-none rounded-[3px] border p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200',
     classNameByIntensity[intensity as keyof typeof classNameByIntensity],
     'transition-[border-color,box-shadow,transform] duration-150',
+    isSelected &&
+      'border-emerald-200 ring-1 ring-emerald-300/80 ring-offset-1 ring-offset-slate-950',
     isActive &&
       'scale-125 border-cyan-100 shadow-[0_0_12px_rgba(34,211,238,0.75),0_0_24px_rgba(168,85,247,0.45)] motion-safe:animate-pulse',
   )

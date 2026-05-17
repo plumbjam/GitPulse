@@ -8,8 +8,10 @@ import {
   calculateActiveStepCount,
   calculateAudioLoopBars,
   calculatePeakContributionCount,
+  clampStepIndex,
   createAudioPatternFromCalendar,
   createAudioPatternFromDataset,
+  findFirstActiveStepIndex,
   selectContributionRangeDays,
   sortContributionDaysAscending,
 } from './contributionSequencer'
@@ -152,6 +154,29 @@ describe('contribution sequencer', () => {
       intensity: 0,
       dataSource: 'approximate',
     })
+  })
+
+  it('finds the first active step and falls back to step 0 for quiet timelines', () => {
+    expect(
+      findFirstActiveStepIndex([
+        { contributionCount: 0, intensity: 0 },
+        { contributionCount: 0, intensity: 0 },
+        { contributionCount: 2, intensity: 2 },
+      ]),
+    ).toBe(2)
+    expect(
+      findFirstActiveStepIndex([
+        { contributionCount: 0, intensity: 0 },
+        { contributionCount: 0, intensity: 0 },
+      ]),
+    ).toBe(0)
+  })
+
+  it('clamps step indexes to the available range', () => {
+    expect(clampStepIndex(-1, 4)).toBe(0)
+    expect(clampStepIndex(2, 4)).toBe(2)
+    expect(clampStepIndex(9, 4)).toBe(4)
+    expect(clampStepIndex(9, 0)).toBe(0)
   })
 })
 
