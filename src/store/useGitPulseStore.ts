@@ -80,6 +80,7 @@ type GitPulseState = {
   setAudioError: (message?: string) => void
   setSelectedStartStep: (index: number, date?: string) => void
   setCurrentPlayheadStep: (index: number, date?: string) => void
+  cuePlayheadStep: (index: number, date?: string) => void
   setSelectedStartAndPlayhead: (index: number, date?: string) => void
   resetPlayheadToSelectedStart: () => void
   skipPlayhead: (delta: -1 | 1, maxIndex: number, nextDate?: string) => void
@@ -549,6 +550,15 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
     set({
       currentPlayheadStepIndex: Math.max(0, currentPlayheadStepIndex),
       currentPlayheadDate,
+    }),
+  cuePlayheadStep: (currentPlayheadStepIndex, currentPlayheadDate) =>
+    set({
+      currentPlayheadStepIndex: Math.max(0, currentPlayheadStepIndex),
+      currentPlayheadDate,
+      isAudioPlaying: false,
+      activeAudioStepIndex: null,
+      activeAudioDate: undefined,
+      audioError: undefined,
     }),
   setSelectedStartAndPlayhead: (selectedStartStepIndex, selectedStartDate) =>
     set({

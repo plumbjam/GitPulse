@@ -22,10 +22,16 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Use demo data/i }))
 
+    await waitFor(() => expect(useGitPulseStore.getState().selectedStartDate).toBeTruthy())
+    const loopStartDate = useGitPulseStore.getState().selectedStartDate
     const contributionTiles = await screen.findAllByRole('button', {
       name: /Select contribution day/i,
     })
-    const targetTile = contributionTiles.find((tile) => tile.getAttribute('data-date'))
+    const targetTile = contributionTiles.find((tile) => {
+      const date = tile.getAttribute('data-date')
+
+      return date && date !== loopStartDate
+    })
     const targetDate = targetTile?.getAttribute('data-date')
 
     expect(targetTile).toBeDefined()
@@ -36,6 +42,6 @@ describe('App', () => {
     await waitFor(() => {
       expect(useGitPulseStore.getState().currentPlayheadDate).toBe(targetDate)
     })
-    expect(useGitPulseStore.getState().selectedStartDate).toBe(targetDate)
+    expect(useGitPulseStore.getState().selectedStartDate).toBe(loopStartDate)
   })
 })

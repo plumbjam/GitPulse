@@ -66,6 +66,7 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
     setAudioError,
     setSelectedStartAndPlayhead,
     setCurrentPlayheadStep,
+    cuePlayheadStep,
     resetPlayheadToSelectedStart,
     setActiveAudioStep,
     resetActiveAudioStep,
@@ -232,7 +233,7 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
     const nextStep = patternSteps[nextStepIndex]
 
     gitPulseAudioEngine.stop()
-    setSelectedStartAndPlayhead(nextStepIndex, nextStep?.date)
+    cuePlayheadStep(nextStepIndex, nextStep?.date)
   }
 
   return (
@@ -380,7 +381,7 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
           </p>
           {selectedStep ? (
             <p className="text-xs text-muted-foreground">
-              Start: Step {selectedStepIndex + 1}/{patternStepCount} -{' '}
+              Loop start: Step {selectedStepIndex + 1}/{patternStepCount} -{' '}
               {formatSingleDate(selectedStep.date)}
             </p>
           ) : null}

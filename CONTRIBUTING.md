@@ -45,8 +45,8 @@ This stage includes:
 - active tile auto-follow inside the scrollable contribution grid;
 - media-style transport controls with Reset, Skip Back, Play/Pause, Stop, and Skip Forward;
 - default playback start from the first active contribution day, with quiet timelines falling back to step 0;
-- clickable media segments and contribution grid tiles that select the playhead without autoplay;
-- pause behavior that preserves the current playhead and stop/reset behavior that returns it to the selected start;
+- clickable media segments and contribution grid tiles that cue the playhead without autoplay;
+- pause behavior that preserves the current playhead and stop/reset behavior that returns it to the first active contribution day;
 - one-step skip controls for moving by one contribution day;
 - BPM, reset-to-mood-default, and volume controls in the media bar;
 - Stage 2, 2.5, Stage 3 pure-function tests, and focused audio state/media UI tests.
@@ -220,10 +220,10 @@ Stage 3 audio work should preserve:
 - dynamic loop bars calculated from the contribution day count;
 - the media bar and Tone runtime sharing the same generated audio pattern;
 - active step callbacks scheduled through Tone's UI-safe draw path when available;
-- selected playback start defaulting to the first active contribution step, or step 0 when all steps are quiet;
-- media segment and contribution grid tile clicks setting the selected start/playhead without autoplay;
+- loop/reset start defaulting to the first active contribution step, or step 0 when all steps are quiet;
+- media segment and contribution grid tile clicks cueing the current playhead without changing the loop start or autoplaying;
 - `Pause` preserving the current playhead while stopping audible playback;
-- `Stop` resetting the visible media playhead to the selected start;
+- `Stop` resetting the visible media playhead to the first active contribution step;
 - Skip Back and Skip Forward moving exactly one contribution step and clamping safely;
 - mood default BPM unless the user has manually overridden BPM;
 - safe Play and Stop behavior without duplicate overlapping loops;

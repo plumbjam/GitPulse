@@ -33,7 +33,7 @@ export function AppShell() {
   const setOAuthError = useGitPulseStore((state) => state.setOAuthError)
   const setOAuthStatus = useGitPulseStore((state) => state.setOAuthStatus)
   const setOAuthToken = useGitPulseStore((state) => state.setOAuthToken)
-  const setSelectedStartAndPlayhead = useGitPulseStore((state) => state.setSelectedStartAndPlayhead)
+  const cuePlayheadStep = useGitPulseStore((state) => state.cuePlayheadStep)
   const contributionCalendar = dataset.contributionCalendar
   const audioPattern = useAudioPattern(dataset, mood, tempo)
   const hasProcessedOAuthCallback = useRef(false)
@@ -46,9 +46,9 @@ export function AppShell() {
         return
       }
 
-      setSelectedStartAndPlayhead(stepIndex, date)
+      cuePlayheadStep(stepIndex, date)
     },
-    [audioPattern, setSelectedStartAndPlayhead],
+    [audioPattern, cuePlayheadStep],
   )
 
   useEffect(() => {

@@ -91,6 +91,29 @@ describe('useGitPulseStore audio state', () => {
     })
   })
 
+  it('cues the playhead without changing the selected loop start', () => {
+    useGitPulseStore.getState().setSelectedStartAndPlayhead(2, '2026-05-02')
+    useGitPulseStore.setState({
+      isAudioPlaying: true,
+      activeAudioStepIndex: 4,
+      activeAudioDate: '2026-05-04',
+      audioError: 'Previous playback error',
+    })
+
+    useGitPulseStore.getState().cuePlayheadStep(6, '2026-05-06')
+
+    expect(useGitPulseStore.getState()).toMatchObject({
+      selectedStartStepIndex: 2,
+      selectedStartDate: '2026-05-02',
+      currentPlayheadStepIndex: 6,
+      currentPlayheadDate: '2026-05-06',
+      isAudioPlaying: false,
+      activeAudioStepIndex: null,
+      activeAudioDate: undefined,
+      audioError: undefined,
+    })
+  })
+
   it('preserves the current playhead when playback is paused', () => {
     useGitPulseStore.getState().setSelectedStartAndPlayhead(2, '2026-05-02')
     useGitPulseStore.getState().setActiveAudioStep(5, '2026-05-05')

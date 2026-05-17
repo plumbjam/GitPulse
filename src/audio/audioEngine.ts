@@ -142,7 +142,7 @@ class GitPulseAudioEngine {
     const stepDuration = Tone.Time('4n').toSeconds()
     const startOffset = startStepIndex * stepDuration
     const loopStart = loopStartStepIndex * stepDuration
-    const loopEnd = Tone.Time(`${pattern.loopBars}m`).toSeconds()
+    const loopEnd = pattern.steps.length * stepDuration
 
     Tone.Transport.loop = true
     Tone.Transport.loopStart = loopStart
@@ -157,8 +157,6 @@ class GitPulseAudioEngine {
       pattern.steps,
       '4n',
     )
-    this.sequence.loop = true
-    this.sequence.loopEnd = loopEnd
     this.sequence.start(0)
   }
 
