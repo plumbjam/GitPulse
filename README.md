@@ -19,9 +19,11 @@ Implemented so far:
 - OAuth session tokens stored in `sessionStorage` for the current browser session;
 - merged contribution calendar data model with deterministic intensity levels;
 - GitPulse-styled contribution grid UI;
+- Sora typography and branded GitPulse logo/icon application;
 - demo and approximate fallback contribution modes when no token is present;
 - deterministic Tone.js loop generation across the full contribution calendar range;
 - contribution media bar directly under the grid, using the same dynamic pattern as playback;
+- contribution grid and audio player presented as the primary working centrepiece, above the future visual field;
 - active media segment and matching contribution tile highlighting while the loop plays;
 - active contribution tile auto-follow inside the scrollable grid;
 - safe click-to-play transport with Reset, Skip Back, Play/Pause, Stop, and Skip Forward controls;

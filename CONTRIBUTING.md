@@ -41,6 +41,7 @@ This stage includes:
 - deterministic Tone.js contribution sequencing;
 - full-range contribution playback with one day per audio step;
 - contribution-linked media bar under the grid with dynamic step counts and active step highlighting;
+- branded Sora-based UI polish with the contribution grid and audio player as the primary centrepiece;
 - matching contribution grid tile glow while playback advances;
 - active tile auto-follow inside the scrollable contribution grid;
 - media-style transport controls with Reset, Skip Back, Play/Pause, Stop, and Skip Forward;

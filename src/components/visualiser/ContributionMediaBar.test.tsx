@@ -27,6 +27,11 @@ describe('ContributionMediaBar', () => {
       }),
     ).toBeInTheDocument()
     await waitFor(() => expect(screen.getAllByText(/Step 2\/73/).length).toBeGreaterThan(0))
+    expect(screen.getByText(/Now cued: Step 2\/73/)).toBeInTheDocument()
+    expect(screen.getByText(/Loop start: First active day - Step 2\/73/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Playback range: cue -> latest day - loop to first active day/),
+    ).toBeInTheDocument()
     expect(useGitPulseStore.getState()).toMatchObject({
       selectedStartStepIndex: 1,
       selectedStartDate: pattern.steps[1].date,
@@ -86,6 +91,7 @@ describe('ContributionMediaBar', () => {
     const stepButton = screen.getByRole('button', { name: /Select audio step 11/i })
 
     expect(screen.getByText(/Step 11\/73/)).toBeInTheDocument()
+    expect(screen.getByText(/Now playing: Step 11\/73/)).toBeInTheDocument()
     expect(stepButton).toHaveClass('scale-y-110')
   })
 

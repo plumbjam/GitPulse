@@ -129,7 +129,6 @@ export function AppShell() {
           <MoodSelector />
         </div>
         <div className="space-y-4">
-          <VisualiserStage />
           <ContributionSignalGrid
             activeDate={isAudioPlaying ? activeAudioDate : undefined}
             calendar={contributionCalendar}
@@ -137,6 +136,7 @@ export function AppShell() {
             selectedDate={currentPlayheadDate}
             mediaBar={<ContributionMediaBar pattern={audioPattern} />}
           />
+          <VisualiserStage />
           <InsightPanel />
         </div>
       </section>

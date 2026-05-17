@@ -337,6 +337,8 @@ Stage 3 maps normalized contribution data into a deterministic Tone.js loop with
 
 - `useAudioPattern` should provide the shared pattern used by playback UI and the Tone runtime;
 - the contribution media bar renders the same ordered steps that are passed to the audio engine;
+- Stage 3.3A.2 presents the contribution grid and media bar as the primary working centrepiece above the future-facing visual field;
+- the app uses Sora typography with the GitPulse logo/icon assets and CSS-only cyan, blue, violet, and magenta atmosphere;
 - the default loop/reset start is the first audio step where `contributionCount > 0` or `intensity > 0`;
 - if every step is quiet, the default loop/reset start is step `0`;
 - clicking a media segment or contribution grid tile cues the current playhead without changing the loop/reset start or autoplaying;

@@ -13,24 +13,24 @@ export function VisualiserStage() {
   const contributionCalendar = dataset.contributionCalendar
 
   return (
-    <Card className="relative min-h-[320px] overflow-hidden p-6 md:min-h-[420px]">
+    <Card className="relative min-h-[220px] overflow-hidden border-violet-300/15 bg-slate-950/35 p-5 md:min-h-[300px]">
       <div
-        className="pointer-events-none absolute inset-0 bg-grid bg-[size:28px_28px] opacity-30"
+        className="pointer-events-none absolute inset-0 bg-grid bg-[size:28px_28px] opacity-20"
         aria-hidden
       />
       <motion.div
-        className="absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-cyan-300/60 via-purple-500/50 to-blue-500/60 blur-2xl"
-        animate={{ scale: [1, 1.08, 1], opacity: [0.6, 0.9, 0.6] }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-cyan-300/35 via-purple-500/35 to-blue-500/35 blur-2xl"
+        animate={{ scale: [1, 1.05, 1], opacity: [0.42, 0.68, 0.42] }}
+        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
         aria-hidden
       />
       <div className="relative z-10 flex h-full flex-col justify-between gap-6">
         <div className="flex flex-wrap items-start justify-between gap-3 text-sm text-cyan-100">
           <div>
-            <p className="font-medium">Visualiser placeholder</p>
-            <p className="text-xs text-cyan-100/80">
-              Contribution calendar data now drives the Stage 3 audio loop while the full visual
-              scene remains in a later pass.
+            <p className="font-medium">Visual field</p>
+            <p className="max-w-xl text-xs leading-5 text-cyan-100/75">
+              Audio-reactive visuals will live here in a later stage. For now, the contribution grid
+              and audio player carry the live GitPulse signal.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs text-cyan-100/90 md:text-sm">

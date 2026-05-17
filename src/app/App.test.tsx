@@ -13,8 +13,23 @@ describe('App', () => {
 
   it('renders the GitPulse shell headline', () => {
     render(<App />)
-    expect(screen.getByText('GitPulse')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'GitPulse' })).toBeInTheDocument()
     expect(screen.getByText(/Turn GitHub activity into sound/i)).toBeInTheDocument()
+    expect(screen.getByText('Visual field')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'GitPulse profile' })).toBeInTheDocument()
+  })
+
+  it('prioritizes the contribution audio instrument before the visual field', () => {
+    render(<App />)
+
+    const contributionSection = screen.getByRole('heading', {
+      name: 'Contribution signal grid',
+    })
+    const visualField = screen.getByText('Visual field')
+
+    expect(
+      contributionSection.compareDocumentPosition(visualField) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 
   it('maps a clicked contribution grid date to the shared audio playhead', async () => {
@@ -27,6 +42,9 @@ describe('App', () => {
     const contributionTiles = await screen.findAllByRole('button', {
       name: /Select contribution day/i,
     })
+
+    expect(screen.getAllByText('Quiet')).toHaveLength(1)
+
     const targetTile = contributionTiles.find((tile) => {
       const date = tile.getAttribute('data-date')
 

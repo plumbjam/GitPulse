@@ -80,9 +80,9 @@ export function InsightPanel() {
   ]
 
   return (
-    <Card className="space-y-3">
+    <Card className="space-y-3 border-cyan-300/10 bg-slate-950/45">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="font-medium">Developer signal</h2>
+        <h2 className="font-medium">GitPulse profile</h2>
         <p className="text-xs text-muted-foreground">
           {isFetching ? 'Fetching GitHub data...' : 'Dataset summary ready'}
         </p>

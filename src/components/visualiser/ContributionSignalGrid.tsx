@@ -12,13 +12,6 @@ type ContributionSignalGridProps = {
 }
 
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-const CONTRIBUTION_LEGEND = [
-  { label: 'Quiet', intensity: 0 },
-  { label: 'Pulse', intensity: 1 },
-  { label: 'Active', intensity: 2 },
-  { label: 'Surge', intensity: 3 },
-  { label: 'Overload', intensity: 4 },
-] as const
 
 export function ContributionSignalGrid({
   activeDate,
@@ -57,7 +50,7 @@ export function ContributionSignalGrid({
 
   if (!calendar) {
     return (
-      <Card className="space-y-3">
+      <Card className="space-y-3 border-cyan-300/20 bg-slate-950/55">
         <h2 className="font-medium">Contribution signal grid</h2>
         <p className="text-sm text-muted-foreground">
           Add a GitHub username or load demo data to render the merged contribution timeline.
@@ -71,13 +64,13 @@ export function ContributionSignalGrid({
   const activeContributionDays = calendar.days.filter((day) => day.contributionCount > 0).length
 
   return (
-    <Card className="space-y-4 overflow-hidden">
+    <Card className="space-y-4 overflow-hidden border-cyan-300/20 bg-slate-950/55 shadow-[0_0_54px_rgba(34,211,238,0.12)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <h2 className="font-medium">Contribution signal grid</h2>
           <p className="text-xs text-muted-foreground">
-            GitPulse-styled merged calendar view. This becomes the preferred timing source for the
-            Stage 3 audio engine.
+            Merged calendar timing for the audio signature. Scroll horizontally to inspect the full
+            contribution range.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2 text-xs text-cyan-100/90 md:text-sm">
@@ -159,15 +152,6 @@ export function ContributionSignalGrid({
       </div>
 
       {mediaBar}
-
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-        {CONTRIBUTION_LEGEND.map((entry) => (
-          <span key={entry.label} className="inline-flex items-center gap-2">
-            <span className={getContributionCellClassName(entry.intensity)} aria-hidden />
-            {entry.label}
-          </span>
-        ))}
-      </div>
     </Card>
   )
 }

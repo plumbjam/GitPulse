@@ -1,12 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: dark;
-  --background: 225 40% 7%;
+  --background: 228 48% 5%;
   --foreground: 210 40% 96%;
-  --card: 220 30% 12%;
+  --card: 224 38% 10%;
   --card-foreground: 210 40% 96%;
   --muted: 226 18% 22%;
   --muted-foreground: 215 20% 72%;
@@ -20,7 +22,45 @@
   @apply border-border;
 }
 
+html {
+  min-height: 100%;
+  background: hsl(var(--background));
+}
+
 body {
   @apply m-0 bg-background text-foreground antialiased;
-  font-family: Inter, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 14% 12%, rgba(34, 211, 238, 0.18), transparent 28rem),
+    radial-gradient(circle at 84% 8%, rgba(217, 70, 239, 0.14), transparent 30rem),
+    radial-gradient(circle at 54% 88%, rgba(99, 102, 241, 0.14), transparent 34rem),
+    linear-gradient(180deg, #050713 0%, #080b18 46%, #040611 100%);
+  background-attachment: fixed;
+  font-family: 'Sora', system-ui, sans-serif;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: 'Sora', system-ui, sans-serif;
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: '';
+  background-image:
+    linear-gradient(rgba(103, 232, 249, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 85, 247, 0.04) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at center, black 0%, transparent 78%);
+}
+
+#root {
+  min-height: 100vh;
+  isolation: isolate;
 }

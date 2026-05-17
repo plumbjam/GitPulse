@@ -43,6 +43,13 @@ const mediaIconPathByName: Record<MediaIconName, string> = {
   'skip-forward': '/src/assets/icons/media/skip-forward.svg',
   'reset-start': '/src/assets/icons/media/reset-start.svg',
 }
+const MEDIA_INTENSITY_LEGEND = [
+  { label: 'Quiet', intensity: 0 },
+  { label: 'Pulse', intensity: 1 },
+  { label: 'Active', intensity: 2 },
+  { label: 'Surge', intensity: 3 },
+  { label: 'Overload', intensity: 4 },
+] as const
 
 export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
   const [isPreparing, setIsPreparing] = useState(false)
@@ -110,6 +117,18 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
       ? 'Approximate activity fallback'
       : 'Contribution calendar'
     : 'Awaiting data'
+  const nowLabel = isAudioPlaying ? 'Now playing' : 'Now cued'
+  const nowStepText = activeStep
+    ? formatStepStatus(nowLabel, activeStep, displayStepIndex, patternStepCount)
+    : `${nowLabel}: No audio pattern is ready yet.`
+  const loopStartText = selectedStep
+    ? `Loop start: First active day - Step ${selectedStepIndex + 1}/${patternStepCount} - ${formatSingleDate(
+        selectedStep.date,
+      )}`
+    : 'Loop start: Awaiting contribution activity'
+  const playbackRangeText = patternStepCount
+    ? 'Playback range: cue -> latest day - loop to first active day'
+    : 'Playback range: Awaiting contribution activity'
 
   useEffect(() => {
     if (!patternStepCount) {
@@ -237,7 +256,7 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
   }
 
   return (
-    <div className="space-y-4 border-t border-white/10 pt-4">
+    <div className="space-y-4 border-t border-cyan-300/15 bg-slate-950/30 pt-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -259,7 +278,7 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="grid gap-3 rounded-lg border border-white/10 bg-white/[0.025] p-3 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center">
         <div
           className="flex flex-wrap items-center gap-2"
           role="group"
@@ -334,9 +353,23 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
           </Button>
         </div>
 
+        <div className="grid gap-2 text-xs text-cyan-100/90 md:grid-cols-[1fr_1fr_minmax(220px,1.2fr)]">
+          <span className="rounded-md border border-cyan-300/10 bg-cyan-300/[0.04] px-3 py-2">
+            {nowStepText}
+          </span>
+          <span className="rounded-md border border-emerald-300/10 bg-emerald-300/[0.04] px-3 py-2">
+            {loopStartText}
+          </span>
+          <span className="rounded-md border border-violet-300/10 bg-violet-300/[0.04] px-3 py-2">
+            {playbackRangeText}
+          </span>
+        </div>
+      </div>
+
+      <div className="space-y-3">
         <div className="min-w-0 space-y-2">
           <div
-            className="grid h-10 items-stretch gap-px overflow-hidden rounded-md border border-white/10 bg-slate-950/60 p-1"
+            className="grid h-12 items-stretch gap-px overflow-hidden rounded-md border border-cyan-300/15 bg-slate-950/70 p-1 shadow-[inset_0_0_22px_rgba(34,211,238,0.08)]"
             role="list"
             aria-label="Contribution audio timeline"
             style={{
@@ -358,7 +391,7 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
                     aria-label={buildStepSelectionLabel(step, index)}
                     onClick={() => handleSelectStep(index)}
                     className={cn(
-                      'h-full w-full min-w-0 appearance-none rounded-[2px] border p-0 transition-[background-color,border-color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200',
+                      'relative h-full w-full min-w-0 appearance-none rounded-[2px] border p-0 transition-[background-color,border-color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200',
                       getMediaSegmentClassName(step.intensity),
                       isSelectedStart &&
                         'ring-1 ring-emerald-300/80 ring-offset-1 ring-offset-slate-950',
@@ -367,24 +400,47 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
                       isActive &&
                         'scale-y-110 border-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.7),0_0_28px_rgba(168,85,247,0.45)]',
                     )}
-                  />
+                  >
+                    {isSelectedStart ? (
+                      <span
+                        className="absolute left-1/2 top-1 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-emerald-200 shadow-[0_0_8px_rgba(110,231,183,0.9)]"
+                        aria-hidden
+                      />
+                    ) : null}
+                    {isPlayhead ? (
+                      <span
+                        className="absolute inset-x-0 top-0 h-0.5 rounded-full bg-cyan-100 shadow-[0_0_8px_rgba(103,232,249,0.9)]"
+                        aria-hidden
+                      />
+                    ) : null}
+                    {isActive ? (
+                      <span
+                        className="absolute bottom-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-fuchsia-100 shadow-[0_0_10px_rgba(232,121,249,0.95)]"
+                        aria-hidden
+                      />
+                    ) : null}
+                  </button>
                 </span>
               )
             })}
           </div>
-          <p className="text-xs text-muted-foreground">
-            {activeStep
-              ? `Step ${displayStepIndex + 1}/${patternStepCount} - ${formatSingleDate(
-                  activeStep.date,
-                )} - ${activeStep.contributionCount} contributions`
-              : 'No audio pattern is ready yet.'}
-          </p>
-          {selectedStep ? (
-            <p className="text-xs text-muted-foreground">
-              Loop start: Step {selectedStepIndex + 1}/{patternStepCount} -{' '}
-              {formatSingleDate(selectedStep.date)}
-            </p>
-          ) : null}
+          <div
+            className="flex flex-wrap items-center gap-3 border-t border-white/10 pt-2 text-xs text-muted-foreground"
+            aria-label="Contribution intensity legend"
+          >
+            {MEDIA_INTENSITY_LEGEND.map((entry) => (
+              <span key={entry.label} className="inline-flex items-center gap-2">
+                <span
+                  className={cn(
+                    'h-2.5 w-4 rounded-sm border',
+                    getMediaSegmentClassName(entry.intensity),
+                  )}
+                  aria-hidden
+                />
+                {entry.label}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -398,12 +454,13 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-3 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="inline-flex items-center gap-2 text-sm" htmlFor="tempo-slider">
-              <Gauge className="h-4 w-4" aria-hidden />
-              BPM: {tempo}
+              <Gauge className="h-4 w-4 text-cyan-200" aria-hidden />
+              <span>BPM</span>
+              <span className="font-semibold text-cyan-100">{tempo}</span>
             </label>
             <Button
               onClick={resetTempoToMoodDefault}
@@ -429,10 +486,11 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
           </p>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3 rounded-lg border border-white/10 bg-white/[0.03] p-3">
           <label className="inline-flex items-center gap-2 text-sm" htmlFor="volume-slider">
-            <Volume2 className="h-4 w-4" aria-hidden />
-            Volume: {volume}%
+            <Volume2 className="h-4 w-4 text-cyan-200" aria-hidden />
+            <span>Volume</span>
+            <span className="font-semibold text-cyan-100">{volume}%</span>
           </label>
           <Slider
             id="volume-slider"
@@ -511,6 +569,16 @@ function buildStepSelectionLabel(step: AudioPatternStep | undefined, index: numb
   return `Select audio step ${index + 1}: ${formatSingleDate(step.date)}, ${
     step.contributionCount
   } contributions`
+}
+
+function formatStepStatus(label: string, step: AudioPatternStep, index: number, stepCount: number) {
+  return `${label}: Step ${index + 1}/${stepCount} - ${formatSingleDate(
+    step.date,
+  )} - ${formatContributionCount(step.contributionCount)}`
+}
+
+function formatContributionCount(count: number) {
+  return `${count} ${count === 1 ? 'contribution' : 'contributions'}`
 }
 
 function formatStepCount(stepCount: number) {
