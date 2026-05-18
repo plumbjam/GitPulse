@@ -9,8 +9,8 @@ export function VisualiserStage() {
           <div className="space-y-1">
             <p className="font-medium">Visual field</p>
             <p className="max-w-2xl text-xs leading-5 text-cyan-100/75 md:text-sm">
-              A living GitPulse signal field. Stage 4 begins with a calm idle signal; later stages
-              will bind it to the real audio output.
+              The heartbeat trace now reacts to the real audio output while retaining a calm idle
+              baseline between phrases.
             </p>
           </div>
         </div>
@@ -18,7 +18,7 @@ export function VisualiserStage() {
         <VisualCanvas />
 
         <p className="text-xs text-cyan-100/70 md:text-sm">
-          Idle signal · Audio-reactive binding arrives in Stage 4.2
+          Audio-reactive heartbeat · Idle baseline remains active
         </p>
       </div>
     </Card>

@@ -358,8 +358,15 @@ Stage 3 maps normalized contribution data into a deterministic Tone.js loop with
 - the analyser reads the actual audio output path where safely possible;
 - the analyser exposes waveform, normalized frequency bytes, RMS, and approximate bass/mid/treble energy;
 - the analyser does not call `Tone.start()`, start playback, seek, or change loop semantics;
-- Stage 4.2 does not bind analyser output to the visual field yet;
-- Stage 4.3 is the intended visual binding stage for heartbeat reactivity.
+- Stage 4.2 does not bind analyser output to the visual field yet.
+
+### Stage 4.3 heartbeat visual binding
+
+- Stage 4.3 binds the existing heartbeat trace to the shared analyser snapshot without changing audio routing;
+- the visual layer downscales and smooths analyser waveform data before rendering;
+- the calm idle sine baseline remains present when audio is inactive and continues to shape the trace when audio is active;
+- RMS and bass energy add moderate pulse emphasis, while mid/treble energy influence line weight and shimmer more subtly;
+- reduced-motion mode stays reactive, but with softer drift, lower amplitude, and gentler pulse lift.
 
 ### Rhythm mapping
 
@@ -494,4 +501,4 @@ Current intentional limitations:
 - no downloaded samples;
 - no per-account audio layers;
 - no export, recording, or MIDI output;
-- Stage 4.1A now provides a live procedural idle signal shell, and Stage 4.2 adds the analyser bridge that later stages can bind to that heartbeat surface.
+- Stage 4.1A provides the calm idle signal shell, Stage 4.2 adds the analyser bridge, and Stage 4.3 binds the heartbeat surface to shaped live audio output without adding repo/data-driven visual mapping yet.

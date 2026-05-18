@@ -1,17 +1,19 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef } from 'react'
 import { Line } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
+import { useAudioAnalyser } from '@/audio/useAudioAnalyser'
+import { HeartbeatPoint } from './visual.types'
+import { calculatePulseBoost, createHeartbeatVisualSignal } from './heartbeatSignal'
 import { visualTheme } from './visualTheme'
-import type { HeartbeatPoint } from './visual.types'
 
 type HeartbeatTraceProps = {
   reducedMotion?: boolean
 }
 
 export function HeartbeatTrace({ reducedMotion = false }: HeartbeatTraceProps) {
-  const [frame, setFrame] = useState(0)
   const elapsedTimeRef = useRef(0)
-  const frameAccumulatorRef = useRef(0)
+  const previousSignalRef = useRef<number[] | undefined>(undefined)
+  const analyserSnapshot = useAudioAnalyser({ fps: reducedMotion ? 18 : 30 })
 
   const samplePositions = useMemo(() => {
     const { sampleCount, spanX } = visualTheme.trace
@@ -22,33 +24,36 @@ export function HeartbeatTrace({ reducedMotion = false }: HeartbeatTraceProps) {
     })
   }, [])
 
-  useFrame((state, delta) => {
+  useFrame((state) => {
     elapsedTimeRef.current = state.clock.getElapsedTime()
-    frameAccumulatorRef.current += delta
-
-    const targetInterval = reducedMotion ? 1 / 12 : 1 / 30
-
-    if (frameAccumulatorRef.current < targetInterval) {
-      return
-    }
-
-    frameAccumulatorRef.current = 0
-    setFrame((currentFrame) => currentFrame + 1)
   })
 
-  void frame
-
-  const pulseBreath =
-    0.92 + Math.sin(elapsedTimeRef.current * 0.42) * (reducedMotion ? 0.015 : 0.04)
-  const tracePoints = sampleSignal(samplePositions, elapsedTimeRef.current, 0, reducedMotion)
-  const glowTracePoints = sampleSignal(
-    samplePositions,
-    elapsedTimeRef.current,
-    -0.24,
+  const pulseBoost = calculatePulseBoost(
+    analyserSnapshot.rms,
+    analyserSnapshot.bassEnergy,
     reducedMotion,
-    0.985,
   )
+  const pulseBreath =
+    0.92 +
+    Math.sin(elapsedTimeRef.current * 0.42) * (reducedMotion ? 0.012 : 0.032) +
+    analyserSnapshot.rms * (reducedMotion ? 0.08 : 0.16)
+  const visualSignal = createHeartbeatVisualSignal({
+    snapshot: analyserSnapshot,
+    sampleCount: samplePositions.length,
+    time: elapsedTimeRef.current,
+    reducedMotion,
+    previousSignal: previousSignalRef.current,
+  })
+
+  previousSignalRef.current = visualSignal
+
+  const tracePoints = sampleSignal(samplePositions, visualSignal, 0)
+  const glowTracePoints = sampleSignal(samplePositions, visualSignal, -0.018)
   const baselinePoints = sampleBaseline(samplePositions, elapsedTimeRef.current, reducedMotion)
+  const lineWidthMultiplier =
+    1 + analyserSnapshot.midEnergy * (reducedMotion ? 0.12 : 0.22) + pulseBoost * 0.16
+  const glowOpacityMultiplier =
+    1 + analyserSnapshot.rms * (reducedMotion ? 0.16 : 0.28) + analyserSnapshot.trebleEnergy * 0.12
 
   return (
     <group>
@@ -64,8 +69,8 @@ export function HeartbeatTrace({ reducedMotion = false }: HeartbeatTraceProps) {
       <Line
         points={glowTracePoints}
         color={visualTheme.palette.violet}
-        lineWidth={1.9}
-        opacity={0.06}
+        lineWidth={1.9 * lineWidthMultiplier}
+        opacity={0.06 * glowOpacityMultiplier}
         transparent
         depthWrite={false}
       />
@@ -75,7 +80,7 @@ export function HeartbeatTrace({ reducedMotion = false }: HeartbeatTraceProps) {
           key={`${layer.color}-${index}`}
           points={tracePoints}
           color={layer.color}
-          lineWidth={layer.lineWidth}
+          lineWidth={layer.lineWidth * lineWidthMultiplier}
           opacity={layer.opacity * pulseBreath}
           transparent
           depthWrite={false}
@@ -86,21 +91,12 @@ export function HeartbeatTrace({ reducedMotion = false }: HeartbeatTraceProps) {
   )
 }
 
-function sampleSignal(
-  samplePositions: number[],
-  elapsedTime: number,
-  phaseOffset: number,
-  reducedMotion: boolean,
-  scale = 1,
-) {
-  return samplePositions.map<HeartbeatPoint>((xPosition) => {
-    const motionScale = reducedMotion ? 0.46 : 1
-    const amplitudeScale = reducedMotion ? 0.58 : 1
-    const waveformY =
-      getSignalY(xPosition + phaseOffset, elapsedTime, motionScale) * amplitudeScale * scale
-
-    return [xPosition, waveformY, 0]
-  })
+function sampleSignal(samplePositions: number[], signal: number[], phaseOffset: number) {
+  return samplePositions.map<HeartbeatPoint>((xPosition, index) => [
+    xPosition,
+    (signal[index] ?? 0) + phaseOffset,
+    0,
+  ])
 }
 
 function sampleBaseline(samplePositions: number[], elapsedTime: number, reducedMotion: boolean) {
@@ -109,21 +105,6 @@ function sampleBaseline(samplePositions: number[], elapsedTime: number, reducedM
     getBaselineY(xPosition, elapsedTime, reducedMotion ? 0.08 : 0.14),
     -0.12,
   ])
-}
-
-function getSignalY(xPosition: number, elapsedTime: number, motionScale: number) {
-  const drift = elapsedTime * visualTheme.trace.speed * motionScale
-  const shiftedX = xPosition + drift
-  const carrier = Math.sin(shiftedX * 1.28 + Math.sin(elapsedTime * 0.16) * 0.38)
-  const support = Math.sin(shiftedX * 2.42 - elapsedTime * 0.34) * 0.26
-  const micro = Math.sin(shiftedX * 5.8 + elapsedTime * 0.48) * 0.07
-  const driftEnvelope = 0.88 + Math.sin(elapsedTime * 0.22 + xPosition * 0.22) * 0.12
-  const baseline = getBaselineY(xPosition, elapsedTime, 1)
-  const meander = (carrier * 0.78 + support * 0.18 + micro) * driftEnvelope
-
-  return (
-    baseline + meander * visualTheme.trace.baseAmplitude + micro * visualTheme.trace.pulseAmplitude
-  )
 }
 
 function getBaselineY(xPosition: number, elapsedTime: number, scale: number) {

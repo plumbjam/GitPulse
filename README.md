@@ -4,9 +4,9 @@
 
 GitPulse is an open-source creative web app that turns one or more GitHub identities into a personalized audio-visual coding signature.
 
-## Stage 2.6 + Stage 3.3A + Stage 4.1 + Stage 4.2 status
+## Stage 2.6 + Stage 3.3A + Stage 4.1 + Stage 4.3 status
 
-Stage 2.6 adds GitHub OAuth login through a Cloudflare Worker broker, Stage 3.3A adds media-style transport controls and selectable playback cue positions, Stage 4.1 adds the first live React Three Fiber visual field foundation, and Stage 4.2 adds the analyser bridge for future audio-reactive visuals.
+Stage 2.6 adds GitHub OAuth login through a Cloudflare Worker broker, Stage 3.3A adds media-style transport controls and selectable playback cue positions, Stage 4.1 adds the first live React Three Fiber visual field foundation, Stage 4.2 adds the analyser bridge, and Stage 4.3 binds the heartbeat trace to the real audio output with shaped analyser-driven motion.
 
 Implemented so far:
 
@@ -37,7 +37,8 @@ Implemented so far:
 - louder practical master volume with limiter protection;
 - medium-height React Three Fiber visual field with a calm procedural idle signal;
 - right-to-left idle waveform motion, subtle grid/scanline monitor atmosphere, and a branded static fallback path;
-- analyser bridge tapped from the shared Tone output path, exposing waveform, frequency, RMS, and approximate bass/mid/treble energy for future visual use;
+- analyser bridge tapped from the shared Tone output path, exposing waveform, frequency, RMS, and approximate bass/mid/treble energy;
+- audio-reactive heartbeat trace that blends a calm idle baseline with smoothed live analyser motion and moderate RMS/bass pulse emphasis;
 - unit tests for REST normalization, repo merge logic, contribution calendar logic, audio state, media timeline mapping, and pure audio mapping helpers.
 
 Not implemented yet:
@@ -176,11 +177,11 @@ It is not true commit history and should be treated as approximate repo activity
 
 ## Visual field status
 
-- the Stage 4.1A idle trace is a low-level sine-like signal with gentle right-to-left motion;
-- the live visual field does not control audio playback;
-- Stage 4.2 exposes analyser data from the actual audio output path without binding it to visuals yet;
-- Stage 4.3 will bind the heartbeat waveform to the analyser output;
-- the visual field stays below the contribution/audio centrepiece and does not remap GitHub data yet.
+- the visual field keeps a calm right-to-left sine-like idle baseline when audio is quiet or inactive;
+- the heartbeat trace now reacts to the actual audio output through the shared analyser bridge;
+- waveform input is downsampled, smoothed, and blended with the idle baseline to avoid raw oscilloscope noise;
+- RMS and bass energy add moderate pulse emphasis, while reduced-motion mode keeps the visual reactive but softer;
+- the live visual field does not control audio playback and does not remap GitHub data yet.
 
 ## Known limitations
 
@@ -189,7 +190,7 @@ It is not true commit history and should be treated as approximate repo activity
 - contribution intensity drives rhythm and sound-role mapping, but richer event-type mapping requires richer GitHub data;
 - there are no per-account audio layers yet;
 - long timelines can create very dense media bars, so individual day segments may become narrow;
-- the visual field is live, but idle remains intentionally calm; stronger heartbeat-style spikes are reserved for future analyser-driven behavior.
+- the visual field is now audio-reactive, but it still does not include repo/data-driven mapping, orbit layers, or the broader pulse-field energy planned for later Stage 4 work.
 
 ## Local setup
 

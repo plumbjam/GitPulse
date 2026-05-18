@@ -56,7 +56,7 @@ export function VisualCanvas({ className }: VisualCanvasProps) {
         <div
           className="relative h-full w-full"
           role="img"
-          aria-label="Live GitPulse idle signal visualizer"
+          aria-label="Live GitPulse audio-reactive heartbeat visualizer"
           data-testid="visual-field-canvas"
         >
           <Canvas

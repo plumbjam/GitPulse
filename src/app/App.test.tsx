@@ -17,7 +17,7 @@ describe('App', () => {
     expect(screen.getByText(/Turn GitHub activity into sound/i)).toBeInTheDocument()
     expect(screen.getByText('Visual field')).toBeInTheDocument()
     expect(
-      screen.getByText(/Idle signal · Audio-reactive binding arrives in Stage 4\.2/i),
+      screen.getByText(/Audio-reactive heartbeat · Idle baseline remains active/i),
     ).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'GitPulse profile' })).toBeInTheDocument()
   })
