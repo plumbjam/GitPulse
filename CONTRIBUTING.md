@@ -26,7 +26,7 @@ Please preserve these principles:
 The current completed stage is:
 
 ```text
-Stage 4.1A - Idle signal tuning
+Stage 4.2 - Audio analyser bridge
 ```
 
 This stage includes:
@@ -53,6 +53,7 @@ This stage includes:
 - BPM, reset-to-mood-default, and volume controls in the media bar;
 - a medium-height React Three Fiber visual field below the contribution/audio centrepiece;
 - a procedural low-intensity idle signal moving right-to-left in a dark monitor shell;
+- a passive analyser bridge tapped from the shared Tone output path for future visual consumption;
 - a static branded fallback card if WebGL or canvas startup is unavailable;
 - Stage 2, 2.5, Stage 3 pure-function tests, and focused audio state/media UI tests.
 
@@ -67,6 +68,7 @@ This stage intentionally does not include:
 - per-account audio layers;
 - commit/PR/issue-specific sound mapping, which requires richer event-type data;
 - audio analyser binding or repo/data-driven visual mapping;
+- visible analyser debug panels or Stage 4.3 visual binding;
 - export or share flows.
 
 ---

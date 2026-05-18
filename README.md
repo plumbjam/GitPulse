@@ -4,9 +4,9 @@
 
 GitPulse is an open-source creative web app that turns one or more GitHub identities into a personalized audio-visual coding signature.
 
-## Stage 2.6 + Stage 3.3A + Stage 4.1 status
+## Stage 2.6 + Stage 3.3A + Stage 4.1 + Stage 4.2 status
 
-Stage 2.6 adds GitHub OAuth login through a Cloudflare Worker broker, Stage 3.3A adds media-style transport controls and selectable playback cue positions, and Stage 4.1 adds the first live React Three Fiber visual field foundation.
+Stage 2.6 adds GitHub OAuth login through a Cloudflare Worker broker, Stage 3.3A adds media-style transport controls and selectable playback cue positions, Stage 4.1 adds the first live React Three Fiber visual field foundation, and Stage 4.2 adds the analyser bridge for future audio-reactive visuals.
 
 Implemented so far:
 
@@ -37,6 +37,7 @@ Implemented so far:
 - louder practical master volume with limiter protection;
 - medium-height React Three Fiber visual field with a calm procedural idle signal;
 - right-to-left idle waveform motion, subtle grid/scanline monitor atmosphere, and a branded static fallback path;
+- analyser bridge tapped from the shared Tone output path, exposing waveform, frequency, RMS, and approximate bass/mid/treble energy for future visual use;
 - unit tests for REST normalization, repo merge logic, contribution calendar logic, audio state, media timeline mapping, and pure audio mapping helpers.
 
 Not implemented yet:
@@ -177,7 +178,8 @@ It is not true commit history and should be treated as approximate repo activity
 
 - the Stage 4.1A idle trace is a low-level sine-like signal with gentle right-to-left motion;
 - the live visual field does not control audio playback;
-- audio analyser binding is intentionally deferred to Stage 4.2;
+- Stage 4.2 exposes analyser data from the actual audio output path without binding it to visuals yet;
+- Stage 4.3 will bind the heartbeat waveform to the analyser output;
 - the visual field stays below the contribution/audio centrepiece and does not remap GitHub data yet.
 
 ## Known limitations

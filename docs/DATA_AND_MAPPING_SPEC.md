@@ -352,6 +352,15 @@ Stage 3 maps normalized contribution data into a deterministic Tone.js loop with
 - the active grid tile should be brought into view inside the scrollable contribution map while playback is active;
 - stopping playback clears the active grid date but keeps the current playhead visible.
 
+### Stage 4.2 analyser bridge
+
+- Stage 4.2 adds a passive analyser tap on the shared Tone output path;
+- the analyser reads the actual audio output path where safely possible;
+- the analyser exposes waveform, normalized frequency bytes, RMS, and approximate bass/mid/treble energy;
+- the analyser does not call `Tone.start()`, start playback, seek, or change loop semantics;
+- Stage 4.2 does not bind analyser output to the visual field yet;
+- Stage 4.3 is the intended visual binding stage for heartbeat reactivity.
+
 ### Rhythm mapping
 
 Stage 3 uses the normalized `intensity` field directly:
@@ -485,4 +494,4 @@ Current intentional limitations:
 - no downloaded samples;
 - no per-account audio layers;
 - no export, recording, or MIDI output;
-- Stage 4.1A now provides a live procedural idle signal shell, while stronger heartbeat spikes remain reserved for future audio-reactive behavior.
+- Stage 4.1A now provides a live procedural idle signal shell, and Stage 4.2 adds the analyser bridge that later stages can bind to that heartbeat surface.

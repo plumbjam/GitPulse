@@ -5,6 +5,7 @@ import type {
   GitPulseAudioPattern,
   SoundRole,
 } from './audio.types'
+import { gitPulseAudioAnalyser } from './audioAnalyser'
 import { DEFAULT_AUDIO_VOLUME, FUTURISTIC_DEFAULT_BPM } from './moods'
 import { createInstrumentRack, disposeInstrumentRack, setMasterVolume } from './instruments'
 import type { GitPulseInstrumentRack } from './instruments'
@@ -110,6 +111,8 @@ class GitPulseAudioEngine {
       disposeInstrumentRack(this.instrumentRack)
       this.instrumentRack = undefined
     }
+
+    gitPulseAudioAnalyser.dispose()
   }
 
   setBpm(bpm: number) {
@@ -148,6 +151,7 @@ class GitPulseAudioEngine {
       mood,
       volumeDb: mapVolumePercentToDecibels(this.currentVolume),
     })
+    gitPulseAudioAnalyser.attach(Tone, this.instrumentRack.limiter)
 
     return this.instrumentRack
   }

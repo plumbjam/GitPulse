@@ -18,4 +18,5 @@ pnpm-debug.log*
 .idea/
 *.log
 *.tsbuildinfo
-
+# Cloudflare Wrangler local/dev output
+worker/.wrangler/
