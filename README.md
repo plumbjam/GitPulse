@@ -4,9 +4,9 @@
 
 GitPulse is an open-source creative web app that turns one or more GitHub identities into a personalized audio-visual coding signature.
 
-## Stage 2.6 + Stage 3.3A status
+## Stage 2.6 + Stage 3.3A + Stage 4.1 status
 
-Stage 2.6 adds GitHub OAuth login through a Cloudflare Worker broker while Stage 3.3A adds media-style transport controls and selectable playback cue positions.
+Stage 2.6 adds GitHub OAuth login through a Cloudflare Worker broker, Stage 3.3A adds media-style transport controls and selectable playback cue positions, and Stage 4.1 adds the first live React Three Fiber visual field foundation.
 
 Implemented so far:
 
@@ -23,7 +23,7 @@ Implemented so far:
 - demo and approximate fallback contribution modes when no token is present;
 - deterministic Tone.js loop generation across the full contribution calendar range;
 - contribution media bar directly under the grid, using the same dynamic pattern as playback;
-- contribution grid and audio player presented as the primary working centrepiece, above the future visual field;
+- contribution grid and audio player presented as the primary working centrepiece, above the Stage 4.1 visual field;
 - active media segment and matching contribution tile highlighting while the loop plays;
 - active contribution tile auto-follow inside the scrollable grid;
 - safe click-to-play transport with Reset, Skip Back, Play/Pause, Stop, and Skip Forward controls;
@@ -35,6 +35,8 @@ Implemented so far:
 - one-step skip controls for moving by one contribution day;
 - mood-aware BPM defaults with a user BPM override and reset-to-default control;
 - louder practical master volume with limiter protection;
+- medium-height React Three Fiber visual field with a procedural ECG-style heartbeat trace;
+- right-to-left idle waveform motion, subtle grid/scanline monitor atmosphere, and a branded static fallback path;
 - unit tests for REST normalization, repo merge logic, contribution calendar logic, audio state, media timeline mapping, and pure audio mapping helpers.
 
 Not implemented yet:
@@ -42,7 +44,6 @@ Not implemented yet:
 - full user accounts or database-backed sessions;
 - broad backend proxy services beyond the OAuth broker;
 - private repository detail access;
-- live React Three Fiber scene;
 - export/share flows;
 - downloaded sample packs;
 - AI audio features;
@@ -172,6 +173,13 @@ It is not true commit history and should be treated as approximate repo activity
 - the UI shows the active audio source, timeline origin, loop length, active contribution steps, and current playhead.
 - custom media SVG icons live in `src/assets/icons/media/`; `skip-forward.svg` is mirrored from `skip-back.svg`, and the UI can fall back to `lucide-react` icons if an expected media icon is unavailable.
 
+## Visual field status
+
+- the Stage 4.1 heartbeat trace is procedural and idle-only for now;
+- the live visual field does not control audio playback;
+- audio analyser binding is intentionally deferred to Stage 4.2;
+- the visual field stays below the contribution/audio centrepiece and does not remap GitHub data yet.
+
 ## Known limitations
 
 - only the Futuristic mood is sonically tuned in Stage 3;
@@ -179,7 +187,7 @@ It is not true commit history and should be treated as approximate repo activity
 - contribution intensity drives rhythm and sound-role mapping, but richer event-type mapping requires richer GitHub data;
 - there are no per-account audio layers yet;
 - long timelines can create very dense media bars, so individual day segments may become narrow;
-- the visualiser is still a placeholder rather than a live audio-reactive scene.
+- the visual field is live, but it is still a procedural heartbeat shell rather than a real audio-reactive analyser view.
 
 ## Local setup
 

@@ -26,7 +26,7 @@ Please preserve these principles:
 The current completed stage is:
 
 ```text
-Stage 3.3A - Media transport controls and playback start position
+Stage 4.1 - Visual field foundation (heartbeat shell)
 ```
 
 This stage includes:
@@ -51,6 +51,9 @@ This stage includes:
 - pause behavior that preserves the current playhead and stop/reset behavior that returns it to the first active contribution day;
 - one-step skip controls for moving by one contribution day;
 - BPM, reset-to-mood-default, and volume controls in the media bar;
+- a medium-height React Three Fiber visual field below the contribution/audio centrepiece;
+- a procedural ECG-style heartbeat waveform moving right-to-left in a dark monitor shell;
+- a static branded fallback card if WebGL or canvas startup is unavailable;
 - Stage 2, 2.5, Stage 3 pure-function tests, and focused audio state/media UI tests.
 
 This stage intentionally does not include:
@@ -63,7 +66,7 @@ This stage intentionally does not include:
 - audio export or MIDI export;
 - per-account audio layers;
 - commit/PR/issue-specific sound mapping, which requires richer event-type data;
-- live R3F scenes;
+- audio analyser binding or repo/data-driven visual mapping;
 - export or share flows.
 
 ---

@@ -1,78 +1,44 @@
-import { motion } from 'framer-motion'
 import { useGitPulseStore } from '@/store/useGitPulseStore'
 import { Card } from '@/components/ui/card'
+import { VisualCanvas } from '@/visuals/VisualCanvas'
 
 export function VisualiserStage() {
   const mood = useGitPulseStore((state) => state.mood)
-  const dataset = useGitPulseStore((state) => state.dataset)
-
-  const totalRepos = dataset.summary.totalRepos
-  const barCount = clamp(totalRepos || 12, 8, 24)
-  const activityScore = dataset.summary.activityScore
-  const dominantLanguages = dataset.summary.dominantLanguages.slice(0, 3)
-  const contributionCalendar = dataset.contributionCalendar
+  const contributionCalendar = useGitPulseStore((state) => state.dataset.contributionCalendar)
 
   return (
-    <Card className="relative min-h-[220px] overflow-hidden border-violet-300/15 bg-slate-950/35 p-5 md:min-h-[300px]">
-      <div
-        className="pointer-events-none absolute inset-0 bg-grid bg-[size:28px_28px] opacity-20"
-        aria-hidden
-      />
-      <motion.div
-        className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-cyan-300/35 via-purple-500/35 to-blue-500/35 blur-2xl"
-        animate={{ scale: [1, 1.05, 1], opacity: [0.42, 0.68, 0.42] }}
-        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-        aria-hidden
-      />
-      <div className="relative z-10 flex h-full flex-col justify-between gap-6">
+    <Card className="relative overflow-hidden border-violet-300/15 bg-slate-950/35 p-5">
+      <div className="relative z-10 flex flex-col gap-4">
         <div className="flex flex-wrap items-start justify-between gap-3 text-sm text-cyan-100">
-          <div>
+          <div className="space-y-1">
             <p className="font-medium">Visual field</p>
-            <p className="max-w-xl text-xs leading-5 text-cyan-100/75">
-              Audio-reactive visuals will live here in a later stage. For now, the contribution grid
-              and audio player carry the live GitPulse signal.
+            <p className="max-w-2xl text-xs leading-5 text-cyan-100/75 md:text-sm">
+              A living GitPulse signal field. Stage 4 begins with a heartbeat-style visual shell;
+              later stages will bind it to the real audio output.
             </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-xs text-cyan-100/90 md:text-sm">
-            <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
-              Repo nodes: {totalRepos}
-            </div>
-            <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2 capitalize">
-              Mood: {mood}
-            </div>
-            <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
-              Activity: {activityScore}
-            </div>
-            <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
-              {dominantLanguages.length ? dominantLanguages.join(' / ') : 'Awaiting languages'}
-            </div>
-            <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2 capitalize">
-              Audio source: {contributionCalendar ? 'contribution calendar' : 'activity fallback'}
-            </div>
-            <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
-              Timeline: {contributionCalendar?.dataSource ?? 'approximate'}
-            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-2">
-          {Array.from({ length: barCount }).map((_, index) => (
-            <motion.span
-              key={index}
-              className="col-span-1 rounded-sm bg-cyan-200/70"
-              animate={{
-                height: [12, 32 + Math.round(activityScore / 3) + (index % 6) * 8, 16],
-                opacity: [0.55, 0.95, 0.6],
-              }}
-              transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.04 }}
-            />
-          ))}
+        <VisualCanvas />
+
+        <div className="flex flex-wrap gap-2 text-xs text-cyan-100/82">
+          <span className="rounded-full border border-cyan-300/15 bg-slate-900/60 px-3 py-1.5">
+            Trace: procedural idle
+          </span>
+          <span className="rounded-full border border-fuchsia-300/15 bg-slate-900/55 px-3 py-1.5">
+            Motion: right-to-left
+          </span>
+          <span className="rounded-full border border-white/10 bg-slate-900/45 px-3 py-1.5 capitalize">
+            Mood shell: {mood}
+          </span>
+          <span className="rounded-full border border-white/10 bg-slate-900/45 px-3 py-1.5">
+            Audio bind: Stage 4.2
+          </span>
+          <span className="rounded-full border border-white/10 bg-slate-900/45 px-3 py-1.5">
+            Timeline source: {contributionCalendar?.dataSource ?? 'approximate'}
+          </span>
         </div>
       </div>
     </Card>
   )
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value))
 }
