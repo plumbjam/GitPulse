@@ -38,14 +38,15 @@ export function HeartbeatTrace({ reducedMotion = false }: HeartbeatTraceProps) {
 
   void frame
 
-  const pulseBreath = 0.85 + Math.sin(elapsedTimeRef.current * 0.85) * (reducedMotion ? 0.03 : 0.08)
-  const tracePoints = sampleHeartbeat(samplePositions, elapsedTimeRef.current, 0, reducedMotion)
-  const ghostTracePoints = sampleHeartbeat(
+  const pulseBreath =
+    0.92 + Math.sin(elapsedTimeRef.current * 0.42) * (reducedMotion ? 0.015 : 0.04)
+  const tracePoints = sampleSignal(samplePositions, elapsedTimeRef.current, 0, reducedMotion)
+  const glowTracePoints = sampleSignal(
     samplePositions,
     elapsedTimeRef.current,
-    -0.58,
+    -0.24,
     reducedMotion,
-    0.74,
+    0.985,
   )
   const baselinePoints = sampleBaseline(samplePositions, elapsedTimeRef.current, reducedMotion)
 
@@ -53,18 +54,18 @@ export function HeartbeatTrace({ reducedMotion = false }: HeartbeatTraceProps) {
     <group>
       <Line
         points={baselinePoints}
-        color={visualTheme.palette.cyan}
-        lineWidth={0.45}
-        opacity={0.12}
+        color={visualTheme.palette.cyanSoft}
+        lineWidth={0.38}
+        opacity={0.16}
         transparent
         depthWrite={false}
       />
 
       <Line
-        points={ghostTracePoints}
+        points={glowTracePoints}
         color={visualTheme.palette.violet}
-        lineWidth={1.8}
-        opacity={0.12}
+        lineWidth={1.9}
+        opacity={0.06}
         transparent
         depthWrite={false}
       />
@@ -85,7 +86,7 @@ export function HeartbeatTrace({ reducedMotion = false }: HeartbeatTraceProps) {
   )
 }
 
-function sampleHeartbeat(
+function sampleSignal(
   samplePositions: number[],
   elapsedTime: number,
   phaseOffset: number,
@@ -93,10 +94,10 @@ function sampleHeartbeat(
   scale = 1,
 ) {
   return samplePositions.map<HeartbeatPoint>((xPosition) => {
-    const motionScale = reducedMotion ? 0.42 : 1
+    const motionScale = reducedMotion ? 0.46 : 1
     const amplitudeScale = reducedMotion ? 0.58 : 1
     const waveformY =
-      getHeartbeatY(xPosition + phaseOffset, elapsedTime, motionScale) * amplitudeScale * scale
+      getSignalY(xPosition + phaseOffset, elapsedTime, motionScale) * amplitudeScale * scale
 
     return [xPosition, waveformY, 0]
   })
@@ -105,42 +106,29 @@ function sampleHeartbeat(
 function sampleBaseline(samplePositions: number[], elapsedTime: number, reducedMotion: boolean) {
   return samplePositions.map<HeartbeatPoint>((xPosition) => [
     xPosition,
-    getBaselineY(xPosition, elapsedTime, reducedMotion ? 0.16 : 0.28),
+    getBaselineY(xPosition, elapsedTime, reducedMotion ? 0.08 : 0.14),
     -0.12,
   ])
 }
 
-function getHeartbeatY(xPosition: number, elapsedTime: number, motionScale: number) {
+function getSignalY(xPosition: number, elapsedTime: number, motionScale: number) {
   const drift = elapsedTime * visualTheme.trace.speed * motionScale
-  const cyclePosition = modulo(xPosition + drift, visualTheme.trace.cycleLength)
-  const cycleProgress = cyclePosition / visualTheme.trace.cycleLength
+  const shiftedX = xPosition + drift
+  const carrier = Math.sin(shiftedX * 1.28 + Math.sin(elapsedTime * 0.16) * 0.38)
+  const support = Math.sin(shiftedX * 2.42 - elapsedTime * 0.34) * 0.26
+  const micro = Math.sin(shiftedX * 5.8 + elapsedTime * 0.48) * 0.07
+  const driftEnvelope = 0.88 + Math.sin(elapsedTime * 0.22 + xPosition * 0.22) * 0.12
   const baseline = getBaselineY(xPosition, elapsedTime, 1)
+  const meander = (carrier * 0.78 + support * 0.18 + micro) * driftEnvelope
 
-  const pulse =
-    gaussian(cycleProgress, 0.198, 0.022, 0.12) -
-    gaussian(cycleProgress, 0.257, 0.015, 0.18) +
-    gaussian(cycleProgress, 0.282, 0.0088, 0.98) -
-    gaussian(cycleProgress, 0.314, 0.016, 0.46) +
-    gaussian(cycleProgress, 0.37, 0.026, 0.2)
-
-  const breathing = 0.93 + Math.sin(elapsedTime * 0.55) * 0.07
-
-  return baseline + pulse * visualTheme.trace.pulseAmplitude * breathing
+  return (
+    baseline + meander * visualTheme.trace.baseAmplitude + micro * visualTheme.trace.pulseAmplitude
+  )
 }
 
 function getBaselineY(xPosition: number, elapsedTime: number, scale: number) {
-  const harmonicOne = Math.sin(xPosition * 1.65 + elapsedTime * 0.92)
-  const harmonicTwo = Math.sin(xPosition * 3.95 - elapsedTime * 0.48) * 0.48
-  const harmonicThree = Math.sin(xPosition * 0.72 + elapsedTime * 0.18) * 0.28
+  const harmonicOne = Math.sin(xPosition * 0.72 + elapsedTime * 0.24)
+  const harmonicTwo = Math.sin(xPosition * 1.58 - elapsedTime * 0.18) * 0.22
 
-  return (harmonicOne + harmonicTwo + harmonicThree) * visualTheme.trace.baseAmplitude * scale
-}
-
-function gaussian(value: number, center: number, spread: number, weight: number) {
-  const normalized = (value - center) / spread
-  return Math.exp(-(normalized * normalized) / 2) * weight
-}
-
-function modulo(value: number, divisor: number) {
-  return ((value % divisor) + divisor) % divisor
+  return (harmonicOne + harmonicTwo) * visualTheme.trace.baseAmplitude * 0.22 * scale
 }

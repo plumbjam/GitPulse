@@ -35,7 +35,7 @@ Implemented so far:
 - one-step skip controls for moving by one contribution day;
 - mood-aware BPM defaults with a user BPM override and reset-to-default control;
 - louder practical master volume with limiter protection;
-- medium-height React Three Fiber visual field with a procedural ECG-style heartbeat trace;
+- medium-height React Three Fiber visual field with a calm procedural idle signal;
 - right-to-left idle waveform motion, subtle grid/scanline monitor atmosphere, and a branded static fallback path;
 - unit tests for REST normalization, repo merge logic, contribution calendar logic, audio state, media timeline mapping, and pure audio mapping helpers.
 
@@ -175,7 +175,7 @@ It is not true commit history and should be treated as approximate repo activity
 
 ## Visual field status
 
-- the Stage 4.1 heartbeat trace is procedural and idle-only for now;
+- the Stage 4.1A idle trace is a low-level sine-like signal with gentle right-to-left motion;
 - the live visual field does not control audio playback;
 - audio analyser binding is intentionally deferred to Stage 4.2;
 - the visual field stays below the contribution/audio centrepiece and does not remap GitHub data yet.
@@ -187,7 +187,7 @@ It is not true commit history and should be treated as approximate repo activity
 - contribution intensity drives rhythm and sound-role mapping, but richer event-type mapping requires richer GitHub data;
 - there are no per-account audio layers yet;
 - long timelines can create very dense media bars, so individual day segments may become narrow;
-- the visual field is live, but it is still a procedural heartbeat shell rather than a real audio-reactive analyser view.
+- the visual field is live, but idle remains intentionally calm; stronger heartbeat-style spikes are reserved for future analyser-driven behavior.
 
 ## Local setup
 

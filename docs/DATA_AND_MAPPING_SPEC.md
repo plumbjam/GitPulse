@@ -337,7 +337,7 @@ Stage 3 maps normalized contribution data into a deterministic Tone.js loop with
 
 - `useAudioPattern` should provide the shared pattern used by playback UI and the Tone runtime;
 - the contribution media bar renders the same ordered steps that are passed to the audio engine;
-- Stage 3.3A.2 presents the contribution grid and media bar as the primary working centrepiece above the Stage 4.1 heartbeat visual field;
+- Stage 3.3A.2 presents the contribution grid and media bar as the primary working centrepiece above the Stage 4.1 idle signal visual field;
 - the app uses Sora typography with the GitPulse logo/icon assets and CSS-only cyan, blue, violet, and magenta atmosphere;
 - the default loop/reset start is the first audio step where `contributionCount > 0` or `intensity > 0`;
 - if every step is quiet, the default loop/reset start is step `0`;
@@ -485,4 +485,4 @@ Current intentional limitations:
 - no downloaded samples;
 - no per-account audio layers;
 - no export, recording, or MIDI output;
-- Stage 4.1 now provides a live procedural heartbeat scene shell, but it is not audio-reactive yet.
+- Stage 4.1A now provides a live procedural idle signal shell, while stronger heartbeat spikes remain reserved for future audio-reactive behavior.

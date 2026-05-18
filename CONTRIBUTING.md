@@ -26,7 +26,7 @@ Please preserve these principles:
 The current completed stage is:
 
 ```text
-Stage 4.1 - Visual field foundation (heartbeat shell)
+Stage 4.1A - Idle signal tuning
 ```
 
 This stage includes:
@@ -52,7 +52,7 @@ This stage includes:
 - one-step skip controls for moving by one contribution day;
 - BPM, reset-to-mood-default, and volume controls in the media bar;
 - a medium-height React Three Fiber visual field below the contribution/audio centrepiece;
-- a procedural ECG-style heartbeat waveform moving right-to-left in a dark monitor shell;
+- a procedural low-intensity idle signal moving right-to-left in a dark monitor shell;
 - a static branded fallback card if WebGL or canvas startup is unavailable;
 - Stage 2, 2.5, Stage 3 pure-function tests, and focused audio state/media UI tests.
 

@@ -28,7 +28,7 @@ describe('VisualCanvas', () => {
     render(<VisualCanvas />)
 
     expect(
-      await screen.findByRole('img', { name: /Live GitPulse heartbeat waveform visualizer/i }),
+      await screen.findByRole('img', { name: /Live GitPulse idle signal visualizer/i }),
     ).toBeInTheDocument()
     expect(screen.getByTestId('visual-field-canvas')).toBeInTheDocument()
     expect(screen.getByTestId('r3f-canvas')).toBeInTheDocument()
