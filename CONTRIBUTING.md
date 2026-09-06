@@ -52,9 +52,9 @@ This stage includes:
 - one-step skip controls for moving by one contribution day;
 - BPM, reset-to-mood-default, and volume controls in the media bar;
 - a medium-height React Three Fiber visual field below the contribution/audio centrepiece;
-- a calm low-intensity idle signal moving right-to-left in a dark monitor shell;
+- a stationary baseline with recorded heartbeat readings scrolling right-to-left in a dark monitor shell;
 - a passive analyser bridge tapped from the shared Tone output path;
-- a heartbeat trace that reacts to shaped live audio output while preserving the idle baseline between phrases;
+- discrete spikes synchronized to scheduled sound attacks, persistent history that freezes on Pause, and reduced-motion support;
 - a static branded fallback card if WebGL or canvas startup is unavailable;
 - Stage 2, 2.5, Stage 3 pure-function tests, and focused audio state/media UI tests.
 
@@ -90,9 +90,13 @@ npm run format
 npm run lint
 npm run format:check
 npm run typecheck
+npm --prefix worker run typecheck
 npm run test
 npm run build
 ```
+
+The root test suite also runs the mocked OAuth broker tests in `worker/test`. Worker typechecking
+requires the dependencies from `worker/package-lock.json`; CI installs and validates both packages.
 
 > Note: the write/fix script is `npm run format`, not `npm run format:write`.
 

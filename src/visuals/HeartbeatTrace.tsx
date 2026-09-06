@@ -1,115 +1,96 @@
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, type ComponentRef } from 'react'
 import { Line } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { useAudioAnalyser } from '@/audio/useAudioAnalyser'
-import { HeartbeatPoint } from './visual.types'
-import { calculatePulseBoost, createHeartbeatVisualSignal } from './heartbeatSignal'
+import { InterleavedBufferAttribute } from 'three'
+import { gitPulseAudioEngine } from '@/audio/audioEngine'
+import {
+  advanceHeartbeatMonitor,
+  createHeartbeatMonitor,
+  writeHeartbeatTrace,
+} from './heartbeatSignal'
+import type { HeartbeatPoint } from './visual.types'
 import { visualTheme } from './visualTheme'
 
-type HeartbeatTraceProps = {
-  reducedMotion?: boolean
-}
+type TraceLine = ComponentRef<typeof Line>
 
-export function HeartbeatTrace({ reducedMotion = false }: HeartbeatTraceProps) {
-  const elapsedTimeRef = useRef(0)
-  const previousSignalRef = useRef<number[] | undefined>(undefined)
-  const analyserSnapshot = useAudioAnalyser({ fps: reducedMotion ? 18 : 30 })
-
-  const samplePositions = useMemo(() => {
-    const { sampleCount, spanX } = visualTheme.trace
-
-    return Array.from({ length: sampleCount }, (_, index) => {
-      const progress = index / (sampleCount - 1)
-      return -spanX + progress * spanX * 2
-    })
-  }, [])
-
-  useFrame((state) => {
-    elapsedTimeRef.current = state.clock.getElapsedTime()
-  })
-
-  const pulseBoost = calculatePulseBoost(
-    analyserSnapshot.rms,
-    analyserSnapshot.bassEnergy,
-    reducedMotion,
+export function HeartbeatTrace({ reducedMotion = false }: { reducedMotion?: boolean }) {
+  const monitor = useMemo(() => createHeartbeatMonitor(), [])
+  const lines = useRef<Array<TraceLine | null>>([])
+  const head = useRef<TraceLine>(null)
+  const positions = useMemo(() => new Float32Array(visualTheme.trace.sampleCount * 3), [])
+  const initialPoints = useMemo(
+    () =>
+      Array.from(
+        { length: visualTheme.trace.sampleCount },
+        (_, i): HeartbeatPoint => [(i / (visualTheme.trace.sampleCount - 1)) * 2 - 1, 0, 0],
+      ),
+    [],
   )
-  const pulseBreath =
-    0.92 +
-    Math.sin(elapsedTimeRef.current * 0.42) * (reducedMotion ? 0.012 : 0.032) +
-    analyserSnapshot.rms * (reducedMotion ? 0.08 : 0.16)
-  const visualSignal = createHeartbeatVisualSignal({
-    snapshot: analyserSnapshot,
-    sampleCount: samplePositions.length,
-    time: elapsedTimeRef.current,
-    reducedMotion,
-    previousSignal: previousSignalRef.current,
+  const headPoints = useMemo(
+    () => initialPoints.slice(-visualTheme.trace.headSampleCount),
+    [initialPoints],
+  )
+
+  useFrame(({ viewport }) => {
+    const { time, readings } = gitPulseAudioEngine.getVisualFrame()
+    advanceHeartbeatMonitor(monitor, time, readings)
+    writeHeartbeatTrace(monitor, time, positions, viewport.width, viewport.height, reducedMotion)
+    for (const line of lines.current) if (line) updateLinePositions(line, positions)
+    if (head.current) {
+      updateLinePositions(
+        head.current,
+        positions.subarray(positions.length - visualTheme.trace.headSampleCount * 3),
+      )
+      // Only the writing end glows. Historical readings keep their original styling.
+      head.current.material.opacity = reducedMotion
+        ? 0
+        : Math.min(0.6, Math.abs(positions[positions.length - 2]) * 0.7)
+    }
   })
-
-  previousSignalRef.current = visualSignal
-
-  const tracePoints = sampleSignal(samplePositions, visualSignal, 0)
-  const glowTracePoints = sampleSignal(samplePositions, visualSignal, -0.018)
-  const baselinePoints = sampleBaseline(samplePositions, elapsedTimeRef.current, reducedMotion)
-  const lineWidthMultiplier =
-    1 + analyserSnapshot.midEnergy * (reducedMotion ? 0.12 : 0.22) + pulseBoost * 0.16
-  const glowOpacityMultiplier =
-    1 + analyserSnapshot.rms * (reducedMotion ? 0.16 : 0.28) + analyserSnapshot.trebleEnergy * 0.12
 
   return (
-    <group>
-      <Line
-        points={baselinePoints}
-        color={visualTheme.palette.cyanSoft}
-        lineWidth={0.38}
-        opacity={0.16}
-        transparent
-        depthWrite={false}
-      />
-
-      <Line
-        points={glowTracePoints}
-        color={visualTheme.palette.violet}
-        lineWidth={1.9 * lineWidthMultiplier}
-        opacity={0.06 * glowOpacityMultiplier}
-        transparent
-        depthWrite={false}
-      />
-
+    <>
       {visualTheme.layers.map((layer, index) => (
         <Line
-          key={`${layer.color}-${index}`}
-          points={tracePoints}
+          key={layer.color}
+          ref={(line) => {
+            lines.current[index] = line
+          }}
+          points={initialPoints}
           color={layer.color}
-          lineWidth={layer.lineWidth * lineWidthMultiplier}
-          opacity={layer.opacity * pulseBreath}
+          lineWidth={layer.lineWidth}
+          opacity={layer.opacity}
           transparent
           depthWrite={false}
+          frustumCulled={false}
           position={[0, 0, layer.z]}
         />
       ))}
-    </group>
+      <Line
+        ref={head}
+        points={headPoints}
+        color={visualTheme.palette.cyanSoft}
+        lineWidth={3.5}
+        opacity={0}
+        transparent
+        depthWrite={false}
+        frustumCulled={false}
+        position={[0, 0, 0.01]}
+      />
+    </>
   )
 }
 
-function sampleSignal(samplePositions: number[], signal: number[], phaseOffset: number) {
-  return samplePositions.map<HeartbeatPoint>((xPosition, index) => [
-    xPosition,
-    (signal[index] ?? 0) + phaseOffset,
-    0,
-  ])
-}
-
-function sampleBaseline(samplePositions: number[], elapsedTime: number, reducedMotion: boolean) {
-  return samplePositions.map<HeartbeatPoint>((xPosition) => [
-    xPosition,
-    getBaselineY(xPosition, elapsedTime, reducedMotion ? 0.08 : 0.14),
-    -0.12,
-  ])
-}
-
-function getBaselineY(xPosition: number, elapsedTime: number, scale: number) {
-  const harmonicOne = Math.sin(xPosition * 0.72 + elapsedTime * 0.24)
-  const harmonicTwo = Math.sin(xPosition * 1.58 - elapsedTime * 0.18) * 0.22
-
-  return (harmonicOne + harmonicTwo) * visualTheme.trace.baseAmplitude * 0.22 * scale
+// Drei's Line stores adjacent vertices in an interleaved segment buffer. Update that buffer
+// in place instead of allocating geometry or rerendering React on every animation frame.
+function updateLinePositions(line: TraceLine, positions: Float32Array) {
+  const start = line.geometry.getAttribute('instanceStart') as InterleavedBufferAttribute
+  const segments = start.data.array
+  for (let index = 0; index < positions.length / 3 - 1; index += 1) {
+    for (let axis = 0; axis < 3; axis += 1) {
+      segments[index * 6 + axis] = positions[index * 3 + axis]
+      segments[index * 6 + 3 + axis] = positions[(index + 1) * 3 + axis]
+    }
+  }
+  start.data.needsUpdate = true
 }

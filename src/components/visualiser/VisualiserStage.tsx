@@ -9,8 +9,8 @@ export function VisualiserStage() {
           <div className="space-y-1">
             <p className="font-medium">Visual field</p>
             <p className="max-w-2xl text-xs leading-5 text-cyan-100/75 md:text-sm">
-              The heartbeat trace now reacts to the real audio output while retaining a calm idle
-              baseline between phrases.
+              Each scheduled sound creates a heartbeat spike. Readings scroll right to left and
+              freeze when playback is paused.
             </p>
           </div>
         </div>
@@ -18,7 +18,7 @@ export function VisualiserStage() {
         <VisualCanvas />
 
         <p className="text-xs text-cyan-100/70 md:text-sm">
-          Audio-reactive heartbeat · Idle baseline remains active
+          Audio-reactive heartbeat · Readings scroll right to left
         </p>
       </div>
     </Card>

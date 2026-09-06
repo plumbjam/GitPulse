@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { createAudioPatternFromCalendar } from '@/audio/contributionSequencer'
 import type { GitPulseContributionCalendar, GitPulseContributionDay } from '@/domain/gitpulse.types'
 import { useGitPulseStore } from '@/store/useGitPulseStore'
+import { gitPulseAudioEngine } from '@/audio/audioEngine'
 import { ContributionMediaBar } from './ContributionMediaBar'
 
 const initialStoreState = useGitPulseStore.getState()
 
 describe('ContributionMediaBar', () => {
   beforeEach(() => {
+    gitPulseAudioEngine.stop()
     useGitPulseStore.setState(initialStoreState, true)
   })
 
@@ -193,6 +195,8 @@ describe('ContributionMediaBar', () => {
       })
     })
     fireEvent.click(screen.getByLabelText('Pause'))
+
+    expect(gitPulseAudioEngine.isPaused()).toBe(true)
 
     expect(useGitPulseStore.getState()).toMatchObject({
       isAudioPlaying: false,

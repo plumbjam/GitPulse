@@ -53,6 +53,18 @@ ALLOWED_ORIGIN=http://localhost:5173
 ALLOWED_REDIRECT_URIS=http://localhost:5173/GitPulse/,https://plumbjam.github.io/GitPulse/
 ```
 
+## Validation
+
+From the repository root, with existing root and Worker dependencies installed:
+
+```bash
+npm --prefix worker run typecheck
+npm run test -- worker/test/index.test.ts
+```
+
+The broker tests mock all upstream requests and use synthetic credentials. They run in the root
+test suite and CI. Upstream network/HTTP failures return a CORS-enabled JSON error with status 502.
+
 ## Deploy
 
 ```bash

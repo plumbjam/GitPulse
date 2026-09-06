@@ -6,7 +6,7 @@ GitPulse is an open-source creative web app that turns one or more GitHub identi
 
 ## Stage 2.6 + Stage 3.3A + Stage 4.1 + Stage 4.3 status
 
-Stage 2.6 adds GitHub OAuth login through a Cloudflare Worker broker, Stage 3.3A adds media-style transport controls and selectable playback cue positions, Stage 4.1 adds the first live React Three Fiber visual field foundation, Stage 4.2 adds the analyser bridge, and Stage 4.3 binds the heartbeat trace to the real audio output with shaped analyser-driven motion.
+Stage 2.6 adds GitHub OAuth login through a Cloudflare Worker broker, Stage 3.3A adds media-style transport controls and selectable playback cue positions, Stage 4.1 adds the first live React Three Fiber visual field foundation, Stage 4.2 adds the analyser bridge, and Stage 4.3 uses real audio attacks to write discrete heartbeat readings into a scrolling monitor history.
 
 Implemented so far:
 
@@ -35,10 +35,10 @@ Implemented so far:
 - one-step skip controls for moving by one contribution day;
 - mood-aware BPM defaults with a user BPM override and reset-to-default control;
 - louder practical master volume with limiter protection;
-- medium-height React Three Fiber visual field with a calm procedural idle signal;
-- right-to-left idle waveform motion, subtle grid/scanline monitor atmosphere, and a branded static fallback path;
+- medium-height React Three Fiber visual field with a stationary baseline;
+- right-to-left scrolling readings, subtle grid/scanline monitor atmosphere, and a branded static fallback path;
 - analyser bridge tapped from the shared Tone output path, exposing waveform, frequency, RMS, and approximate bass/mid/treble energy;
-- audio-reactive heartbeat trace that blends a calm idle baseline with smoothed live analyser motion and moderate RMS/bass pulse emphasis;
+- audio-triggered heartbeat spikes that return to baseline while previous readings retain their shape and scroll left;
 - unit tests for REST normalization, repo merge logic, contribution calendar logic, audio state, media timeline mapping, and pure audio mapping helpers.
 
 Not implemented yet:
@@ -97,6 +97,11 @@ This powers:
 - language breakdowns;
 - merged repo summary metrics.
 
+Repository totals cover up to 100 recently pushed public repositories per account. Detailed
+language fetching is limited to 24 repositories per account; remaining repositories use their
+primary language as an estimate. The profile summary displays these limits. These samples are
+separate from the authenticated contribution calendar.
+
 ### Optional GraphQL contribution calendar
 
 - `POST https://api.github.com/graphql`
@@ -115,6 +120,7 @@ GraphQL contribution calendar fetching requires an OAuth session token or a manu
 - a Cloudflare Worker broker exchanges GitHub OAuth codes for access tokens;
 - the GitHub OAuth client secret is never placed in frontend code;
 - OAuth tokens are stored in `sessionStorage` and cleared when the browser session ends or the user disconnects;
+- pending contribution requests are invalidated on authentication changes; older refreshes cannot overwrite newer results;
 - manual token input remains available as an advanced developer fallback;
 - manual tokens are stored in memory only;
 - without OAuth or a manual token, GitPulse falls back to demo or approximate contribution activity;
@@ -156,7 +162,7 @@ It is not true commit history and should be treated as approximate repo activity
 - browsers block autoplay, so playback begins only after an explicit `Play` click;
 - GitPulse calls `Tone.start()` only from that user gesture path;
 - repeated transport interactions reuse the Tone transport safely and avoid overlapping duplicate loops;
-- `Pause` stops the audible Tone transport but preserves the current playhead, so the next `Play` starts from that step;
+- `Pause` silences playback and freezes the visual history while preserving the current playhead; the next `Play` starts from that step and resumes the visual clock without a time jump;
 - `Stop` clears scheduled playback and resets the visible media timeline back to the first active contribution day;
 - `Reset` returns the playhead to the first active contribution day;
 - Skip Back and Skip Forward move one contribution day/step and clamp at the timeline ends;
@@ -177,10 +183,15 @@ It is not true commit history and should be treated as approximate repo activity
 
 ## Visual field status
 
-- the visual field keeps a calm right-to-left sine-like idle baseline when audio is quiet or inactive;
-- the heartbeat trace now reacts to the actual audio output through the shared analyser bridge;
-- waveform input is downsampled, smoothed, and blended with the idle baseline to avoid raw oscilloscope noise;
-- RMS and bass energy add moderate pulse emphasis, while reduced-motion mode keeps the visual reactive but softer;
+- instrument attacks write heartbeat-shaped spikes at their scheduled audio times, including extra hits within an activity square; simultaneous voices share a spike, while quiet squares and muted playback produce none;
+- the engine supplies timestamped sound events and velocity-based spike heights, avoiding analyser thresholds or cooldowns that could miss close hits;
+- a fixed-rate history retains each reading while four seconds of recorded signal scroll right to left, independently of frame rate;
+- each pulse has a 140 ms recovery, interrupted by the next hit if necessary; Pause freezes the complete trace, while Stop lets recorded readings scroll offscreen;
+- the activity-square highlight and pulses follow the audio-context clock; the heartbeat is a stylized representation of note attacks, not the raw waveform or separate delay/reverb echoes;
+- paused playback also disables mixer previews; press Stop or resume playback to preview sounds;
+- pause/stop discard scheduled instrument voices and effects so delayed hits cannot leak into a resumed session; Play rebuilds the instrument rack and retains the existing step-based resume behavior;
+- reduced motion uses smaller spikes, a slower six-second window, and no writing-end glow;
+- the trace fits the visible canvas on resize, and animation updates existing geometry without a React state update per frame;
 - the live visual field does not control audio playback and does not remap GitHub data yet.
 
 ## Known limitations
@@ -208,9 +219,14 @@ npm run format
 npm run lint
 npm run format:check
 npm run typecheck
+npm --prefix worker run typecheck
 npm run test
 npm run build
 ```
+
+The root test suite includes mocked OAuth Worker tests under `worker/test`; they use synthetic
+credentials and make no external requests. CI installs both lockfiles and typechecks the Worker
+separately from the frontend.
 
 ## Stack
 

@@ -20,11 +20,7 @@ export type VisualTheme = {
   }
   trace: {
     sampleCount: number
-    spanX: number
-    cycleLength: number
-    speed: number
-    baseAmplitude: number
-    pulseAmplitude: number
+    headSampleCount: number
   }
   layers: HeartbeatTraceLayer[]
 }

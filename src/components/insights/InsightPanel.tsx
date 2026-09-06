@@ -87,6 +87,13 @@ export function InsightPanel() {
           {isFetching ? 'Fetching GitHub data...' : 'Dataset summary ready'}
         </p>
       </div>
+      {dataset.mode === 'live' && dataset.summary.successfulIdentities > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Repository totals cover up to 100 recently pushed public repositories per account.
+          Detailed language data covers up to 24 repositories per account; other repositories use
+          their primary language as an estimate.
+        </p>
+      ) : null}
       <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
         {insightRows.map((row) => (
           <div key={row.label} className="rounded-md border border-white/10 p-3">

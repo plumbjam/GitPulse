@@ -6,6 +6,7 @@ import type {
   SoundRole,
 } from './audio.types'
 import { gitPulseAudioAnalyser } from './audioAnalyser'
+import { AudioVisualTimeline } from './audioVisualTimeline'
 import { DEFAULT_AUDIO_VOLUME, FUTURISTIC_DEFAULT_BPM } from './moods'
 import { createInstrumentRack, disposeInstrumentRack, setMasterVolume } from './instruments'
 import type { GitPulseInstrumentRack } from './instruments'
@@ -26,7 +27,7 @@ type PlayOptions = {
   onStep?: (stepIndex: number, step: AudioPatternStep) => void
 }
 
-class GitPulseAudioEngine {
+export class GitPulseAudioEngine {
   private tone?: ToneModule
   private tonePromise?: Promise<ToneModule>
   private instrumentRack?: GitPulseInstrumentRack
@@ -34,6 +35,19 @@ class GitPulseAudioEngine {
   private currentBpm = FUTURISTIC_DEFAULT_BPM
   private currentVolume = DEFAULT_AUDIO_VOLUME
   private playbackToken = 0
+  private readonly visualTimeline = new AudioVisualTimeline(
+    () => this.tone?.immediate() ?? performance.now() / 1000,
+  )
+
+  getVisualFrame() {
+    return this.visualTimeline.getFrame()
+  }
+  isPaused() {
+    return this.visualTimeline.isPaused()
+  }
+  stopIfPlaying() {
+    if (this.visualTimeline.isPlaying()) this.stop()
+  }
 
   async play(pattern: GitPulseAudioPattern, options: PlayOptions) {
     const Tone = await this.loadTone()
@@ -42,9 +56,11 @@ class GitPulseAudioEngine {
     this.currentVolume = options.volume
 
     await Tone.start()
-    this.stop()
+    this.pause()
     const playbackToken = this.playbackToken
     await this.ensureInstrumentRack(pattern.mood)
+    if (playbackToken !== this.playbackToken) throw new Error('Playback was cancelled')
+    this.visualTimeline.start()
     this.applyBpm()
     this.applyVolume()
     this.schedulePattern(
@@ -67,6 +83,7 @@ class GitPulseAudioEngine {
       volume?: number
     },
   ) {
+    if (this.isPaused()) throw new Error('Resume playback or press Stop before previewing sounds.')
     const Tone = await this.loadTone()
 
     if (options?.volume !== undefined) {
@@ -86,6 +103,16 @@ class GitPulseAudioEngine {
   }
 
   stop() {
+    this.visualTimeline.stop()
+    this.haltAudio()
+  }
+
+  pause() {
+    this.visualTimeline.pause()
+    this.haltAudio()
+  }
+
+  private haltAudio() {
     this.playbackToken += 1
 
     if (!this.tone) {
@@ -96,8 +123,16 @@ class GitPulseAudioEngine {
     this.sequence?.dispose()
     this.sequence = undefined
 
-    this.instrumentRack?.bass.triggerRelease()
-    this.instrumentRack?.lead.releaseAll()
+    // Silence scheduled look-ahead notes and effect tails immediately on pause/stop.
+    if (this.instrumentRack) this.instrumentRack.master.mute = true
+
+    if (this.instrumentRack) {
+      // Disposing cancels instrument-level scheduling too, including delayed PolySynth attacks.
+      // Recreate on Play so a quick resume cannot reveal notes from the previous session.
+      gitPulseAudioAnalyser.dispose()
+      disposeInstrumentRack(this.instrumentRack)
+      this.instrumentRack = undefined
+    }
 
     this.tone.Transport.stop()
     this.tone.Transport.cancel(0)
@@ -247,16 +282,12 @@ class GitPulseAudioEngine {
     const accentVelocity = Math.max(0.18, step.velocity * 0.32)
 
     if (step.kick) {
-      this.instrumentRack.kick.triggerAttackRelease(
-        'C1',
-        step.accent ? '8n' : '16n',
-        time,
-        step.velocity,
-      )
+      this.triggerPitched('kick', 'C1', step.accent ? '8n' : '16n', time, step.velocity)
     }
 
     if (step.snare) {
-      this.instrumentRack.snare.triggerAttackRelease(
+      this.triggerNoise(
+        'snare',
         step.accent ? '8n' : '16n',
         time + sixteenthNote,
         Math.max(0.2, step.velocity * 0.6),
@@ -264,20 +295,17 @@ class GitPulseAudioEngine {
     }
 
     if (step.hat) {
-      this.instrumentRack.hats.triggerAttackRelease('32n', time + eighthNote, hatVelocity)
+      this.triggerNoise('hats', '32n', time + eighthNote, hatVelocity)
     }
 
     if (step.accent) {
-      this.instrumentRack.hats.triggerAttackRelease('32n', time + sixteenthNote, accentVelocity)
-      this.instrumentRack.hats.triggerAttackRelease(
-        '32n',
-        time + eighthNote + sixteenthNote,
-        accentVelocity,
-      )
+      this.triggerNoise('hats', '32n', time + sixteenthNote, accentVelocity)
+      this.triggerNoise('hats', '32n', time + eighthNote + sixteenthNote, accentVelocity)
     }
 
     if (step.bassNote) {
-      this.instrumentRack.bass.triggerAttackRelease(
+      this.triggerPitched(
+        'bass',
         step.bassNote,
         step.accent ? '8n' : '16n',
         time,
@@ -286,7 +314,8 @@ class GitPulseAudioEngine {
     }
 
     if (step.leadNote) {
-      this.instrumentRack.lead.triggerAttackRelease(
+      this.triggerPitched(
+        'lead',
         step.leadNote,
         step.accent ? '2n' : '4n',
         time + sixteenthNote,
@@ -312,91 +341,98 @@ class GitPulseAudioEngine {
 
     switch (soundRole) {
       case 'soft-kick':
-        this.instrumentRack.kick.triggerAttackRelease('C1', '16n', time, velocity * 0.72)
+        this.triggerPitched('kick', 'C1', '16n', time, velocity * 0.72)
         return
       case 'pulse-blip':
-        this.instrumentRack.lead.triggerAttackRelease(leadNote, '16n', time, velocity * 0.62)
+        this.triggerPitched('lead', leadNote, '16n', time, velocity * 0.62)
         return
       case 'muted-pluck':
-        this.instrumentRack.lead.triggerAttackRelease('C5', '16n', time, velocity * 0.5)
+        this.triggerPitched('lead', 'C5', '16n', time, velocity * 0.5)
         return
       case 'sub-tick':
-        this.instrumentRack.bass.triggerAttackRelease('A1', '16n', time, velocity * 0.52)
+        this.triggerPitched('bass', 'A1', '16n', time, velocity * 0.52)
         return
       case 'kick-hat':
-        this.instrumentRack.kick.triggerAttackRelease('C1', '16n', time, velocity)
-        this.instrumentRack.hats.triggerAttackRelease('32n', time + eighthNote, velocity * 0.44)
+        this.triggerPitched('kick', 'C1', '16n', time, velocity)
+        this.triggerNoise('hats', '32n', time + eighthNote, velocity * 0.44)
         return
       case 'pulse-hat':
-        this.instrumentRack.lead.triggerAttackRelease(leadNote, '16n', time, velocity * 0.56)
-        this.instrumentRack.hats.triggerAttackRelease('32n', time + eighthNote, velocity * 0.46)
+        this.triggerPitched('lead', leadNote, '16n', time, velocity * 0.56)
+        this.triggerNoise('hats', '32n', time + eighthNote, velocity * 0.46)
         return
       case 'bass-note':
-        this.instrumentRack.bass.triggerAttackRelease(bassNote, '8n', time, velocity * 0.82)
+        this.triggerPitched('bass', bassNote, '8n', time, velocity * 0.82)
         return
       case 'pluck-pair':
-        this.instrumentRack.lead.triggerAttackRelease('A4', '16n', time, velocity * 0.52)
-        this.instrumentRack.lead.triggerAttackRelease(
-          'E5',
-          '16n',
-          time + sixteenthNote,
-          velocity * 0.48,
-        )
+        this.triggerPitched('lead', 'A4', '16n', time, velocity * 0.52)
+        this.triggerPitched('lead', 'E5', '16n', time + sixteenthNote, velocity * 0.48)
         return
       case 'kick-snare-hat':
-        this.instrumentRack.kick.triggerAttackRelease('C1', '16n', time, velocity)
-        this.instrumentRack.snare.triggerAttackRelease('16n', time + sixteenthNote, velocity * 0.58)
-        this.instrumentRack.hats.triggerAttackRelease('32n', time + eighthNote, velocity * 0.42)
+        this.triggerPitched('kick', 'C1', '16n', time, velocity)
+        this.triggerNoise('snare', '16n', time + sixteenthNote, velocity * 0.58)
+        this.triggerNoise('hats', '32n', time + eighthNote, velocity * 0.42)
         return
       case 'bass-clap':
-        this.instrumentRack.bass.triggerAttackRelease(bassNote, '8n', time, velocity * 0.76)
-        this.instrumentRack.snare.triggerAttackRelease('16n', time + sixteenthNote, velocity * 0.64)
+        this.triggerPitched('bass', bassNote, '8n', time, velocity * 0.76)
+        this.triggerNoise('snare', '16n', time + sixteenthNote, velocity * 0.64)
         return
       case 'lead-accent':
-        this.instrumentRack.lead.triggerAttackRelease(leadNote, '8n', time, velocity * 0.74)
-        this.instrumentRack.hats.triggerAttackRelease('32n', time + eighthNote, velocity * 0.36)
+        this.triggerPitched('lead', leadNote, '8n', time, velocity * 0.74)
+        this.triggerNoise('hats', '32n', time + eighthNote, velocity * 0.36)
         return
       case 'chord-stab':
-        this.instrumentRack.lead.triggerAttackRelease(
-          ['A4', 'C5', 'E5'],
-          '8n',
-          time,
-          velocity * 0.56,
-        )
+        this.triggerPitched('lead', ['A4', 'C5', 'E5'], '8n', time, velocity * 0.56)
         return
       case 'accent-crash':
-        this.instrumentRack.snare.triggerAttackRelease('8n', time, velocity * 0.78)
-        this.instrumentRack.hats.triggerAttackRelease('16n', time + sixteenthNote, velocity * 0.72)
-        this.instrumentRack.hats.triggerAttackRelease('16n', time + eighthNote, velocity * 0.58)
+        this.triggerNoise('snare', '8n', time, velocity * 0.78)
+        this.triggerNoise('hats', '16n', time + sixteenthNote, velocity * 0.72)
+        this.triggerNoise('hats', '16n', time + eighthNote, velocity * 0.58)
         return
       case 'tom-fill':
-        this.instrumentRack.kick.triggerAttackRelease('C2', '16n', time, velocity * 0.88)
-        this.instrumentRack.kick.triggerAttackRelease(
-          'G1',
-          '16n',
-          time + sixteenthNote,
-          velocity * 0.7,
-        )
+        this.triggerPitched('kick', 'C2', '16n', time, velocity * 0.88)
+        this.triggerPitched('kick', 'G1', '16n', time + sixteenthNote, velocity * 0.7)
         return
       case 'bright-lead-hit':
-        this.instrumentRack.lead.triggerAttackRelease(leadNote, '4n', time, velocity * 0.84)
-        this.instrumentRack.kick.triggerAttackRelease('C1', '16n', time, velocity * 0.78)
+        this.triggerPitched('lead', leadNote, '4n', time, velocity * 0.84)
+        this.triggerPitched('kick', 'C1', '16n', time, velocity * 0.78)
         return
       case 'glitch-burst':
-        this.instrumentRack.hats.triggerAttackRelease('32n', time, velocity * 0.58)
-        this.instrumentRack.hats.triggerAttackRelease(
-          '32n',
-          time + sixteenthNote / 2,
-          velocity * 0.52,
-        )
-        this.instrumentRack.lead.triggerAttackRelease(
-          'D5',
-          '16n',
-          time + sixteenthNote,
-          velocity * 0.48,
-        )
+        this.triggerNoise('hats', '32n', time, velocity * 0.58)
+        this.triggerNoise('hats', '32n', time + sixteenthNote / 2, velocity * 0.52)
+        this.triggerPitched('lead', 'D5', '16n', time + sixteenthNote, velocity * 0.48)
         return
     }
+  }
+
+  private triggerPitched(
+    instrument: 'kick' | 'bass' | 'lead',
+    notes: string | string[],
+    duration: '32n' | '16n' | '8n' | '4n' | '2n',
+    time: number,
+    velocity: number,
+  ) {
+    if (!this.instrumentRack) return
+    if (instrument === 'lead')
+      this.instrumentRack.lead.triggerAttackRelease(notes, duration, time, velocity)
+    else
+      this.instrumentRack[instrument].triggerAttackRelease(
+        Array.isArray(notes) ? notes[0] : notes,
+        duration,
+        time,
+        velocity,
+      )
+    this.visualTimeline.schedule(time, velocity)
+  }
+
+  private triggerNoise(
+    instrument: 'snare' | 'hats',
+    duration: '32n' | '16n' | '8n',
+    time: number,
+    velocity: number,
+  ) {
+    if (!this.instrumentRack) return
+    this.instrumentRack[instrument].triggerAttackRelease(duration, time, velocity)
+    this.visualTimeline.schedule(time, velocity)
   }
 
   private applyBpm() {
@@ -408,10 +444,12 @@ class GitPulseAudioEngine {
   }
 
   private applyVolume() {
+    this.visualTimeline.setMuted(this.currentVolume <= 0)
     if (!this.instrumentRack) {
       return
     }
 
+    this.instrumentRack.master.mute = this.currentVolume <= 0 || this.isPaused()
     setMasterVolume(this.instrumentRack, mapVolumePercentToDecibels(this.currentVolume))
   }
 }

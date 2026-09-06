@@ -362,11 +362,21 @@ Stage 3 maps normalized contribution data into a deterministic Tone.js loop with
 
 ### Stage 4.3 heartbeat visual binding
 
-- Stage 4.3 binds the existing heartbeat trace to the shared analyser snapshot without changing audio routing;
-- the visual layer downscales and smooths analyser waveform data before rendering;
-- the calm idle sine baseline remains present when audio is inactive and continues to shape the trace when audio is active;
-- RMS and bass energy add moderate pulse emphasis, while mid/treble energy influence line weight and shimmer more subtly;
-- reduced-motion mode stays reactive, but with softer drift, lower amplitude, and gentler pulse lift.
+- Stage 4.3 now receives timestamped instrument-attack events directly from the audio engine; the passive analyser remains available for diagnostics;
+- every scheduled hit is represented, including subdivisions within a contribution day; simultaneous voices are combined, while quiet steps and muted playback produce no new spikes;
+- each reading starts at its scheduled audio-context time with a velocity-based peak and a finite 140 ms recovery, retriggered immediately if another hit arrives;
+- a bounded 120 Hz sample history preserves previous readings; elapsed time scrolls the four-second window right to left, with new data at the right edge;
+- sustained sound does not continuously regenerate spikes, and old readings finish scrolling offscreen after playback stops;
+- Pause freezes the visual clock and cancels future hits; Play resumes the clock without a wall-time jump and retains the current contribution-step resume behavior;
+- the activity tile and visual events use the same audio clock; the trace represents note attacks rather than the raw waveform or additional effect echoes;
+- instrument racks are muted and disposed on pause/stop to cancel scheduled voice attacks and effects, then rebuilt for Play; mixer previews are disabled while paused;
+- amplitude is capped at `1.28` normally and scaled by `0.52` for reduced motion, with additional viewport-height protection;
+- analyser debugging is opt-in; unavailable browser storage disables diagnostics without interrupting snapshots;
+- the baseline is stationary and exactly zero between readings; the visual rig does not drift;
+- only the writing end has reactive glow; historical readings retain their shape and styling;
+- reduced-motion mode uses a slower six-second window, smaller spikes, and no writing-end glow;
+- resizing fits the trace to the current viewport without resetting its history; geometry buffers are updated directly in the render loop;
+- long gaps between render frames expire old history without synthesizing missed readings.
 
 ### Rhythm mapping
 

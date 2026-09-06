@@ -55,7 +55,17 @@ export default {
       return jsonResponse({ error: 'This redirect URI is not allowed.' }, 400, env, origin)
     }
 
-    const tokenResponse = await exchangeCodeWithGitHub(env, body.code, body.redirectUri)
+    let tokenResponse: GitHubTokenResponse
+    try {
+      tokenResponse = await exchangeCodeWithGitHub(env, body.code, body.redirectUri)
+    } catch {
+      return jsonResponse(
+        { error: 'GitHub OAuth is temporarily unavailable. Please try again.' },
+        502,
+        env,
+        origin,
+      )
+    }
 
     if (tokenResponse.error || !tokenResponse.access_token) {
       return jsonResponse(
@@ -114,8 +124,16 @@ async function exchangeCodeWithGitHub(env: Env, code: string, redirectUri: strin
     }),
   })
 
+  if (!response.ok) {
+    throw new Error('OAuth upstream request failed')
+  }
+
   try {
-    return (await response.json()) as GitHubTokenResponse
+    const payload: unknown = await response.json()
+    if (!payload || typeof payload !== 'object') {
+      throw new Error('Invalid OAuth response')
+    }
+    return payload as GitHubTokenResponse
   } catch {
     return {
       error: 'invalid_response',

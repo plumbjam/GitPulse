@@ -19,6 +19,8 @@ export function PulseMixerPanel() {
   const [previewError, setPreviewError] = useState<string | undefined>()
   const mood = useGitPulseStore((state) => state.mood)
   const volume = useGitPulseStore((state) => state.volume)
+  const isAudioPlaying = useGitPulseStore((state) => state.isAudioPlaying)
+  const isPaused = !isAudioPlaying && gitPulseAudioEngine.isPaused()
   const mapping = useGitPulseStore((state) => state.soundMappings[state.mood])
   const setSoundMapping = useGitPulseStore((state) => state.setSoundMapping)
   const resetSoundMappingForMood = useGitPulseStore((state) => state.resetSoundMappingForMood)
@@ -67,6 +69,11 @@ export function PulseMixerPanel() {
           </p>
 
           <div className="grid gap-3">
+            {isPaused ? (
+              <p className="text-xs text-muted-foreground">
+                Resume playback or press Stop to preview sounds.
+              </p>
+            ) : null}
             {ACTIVITY_INTENSITY_KEYS.map((intensityKey) => {
               const selectedRole = mapping[intensityKey]
 
@@ -98,7 +105,10 @@ export function PulseMixerPanel() {
                     size="sm"
                     aria-label={`Preview ${SOUND_ROLE_LABELS[selectedRole]}`}
                     onClick={() => void handlePreview(intensityKey, selectedRole)}
-                    disabled={previewingKey === intensityKey}
+                    disabled={isPaused || previewingKey === intensityKey}
+                    title={
+                      isPaused ? 'Resume playback or press Stop to preview sounds.' : undefined
+                    }
                   >
                     <Volume2 className="h-4 w-4" aria-hidden />
                     {previewingKey === intensityKey ? 'Previewing' : 'Preview'}

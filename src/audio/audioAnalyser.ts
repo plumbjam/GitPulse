@@ -9,8 +9,29 @@ type ToneConnectable = {
 export const DEFAULT_ANALYSER_WAVEFORM_SIZE = 256
 export const DEFAULT_ANALYSER_FREQUENCY_SIZE = 256
 
-const AUDIO_ACTIVITY_RMS_THRESHOLD = 0.01
-const AUDIO_ACTIVITY_ENERGY_THRESHOLD = 0.015
+const AUDIO_ACTIVITY_RMS_THRESHOLD = 0.004
+const AUDIO_ACTIVITY_ENERGY_THRESHOLD = 0.008
+const AUDIO_ANALYSER_DEBUG_STORAGE_KEY = 'gitpulse.debug.audioAnalyser'
+const AUDIO_ANALYSER_DEBUG_LOG_INTERVAL_MS = 1000
+
+type AudioAnalyserActivityInput = Pick<
+  GitPulseAnalyserSnapshot,
+  'rms' | 'bassEnergy' | 'midEnergy' | 'trebleEnergy'
+>
+
+type AudioAnalyserDebugSummary = {
+  source: 'audioAnalyser'
+  attached: boolean
+  contextState: string
+  waveformMin: number
+  waveformMax: number
+  frequencyMax: number
+  rms: number
+  bassEnergy: number
+  midEnergy: number
+  trebleEnergy: number
+  isAudioActive: boolean
+}
 
 export function createSilentAnalyserSnapshot(): GitPulseAnalyserSnapshot {
   return {
@@ -84,10 +105,73 @@ export function calculateAnalyserEnergies(frequency: Uint8Array) {
   }
 }
 
+export function calculateIsAudioActive({
+  rms,
+  bassEnergy,
+  midEnergy,
+  trebleEnergy,
+}: AudioAnalyserActivityInput) {
+  return (
+    rms >= AUDIO_ACTIVITY_RMS_THRESHOLD ||
+    bassEnergy >= AUDIO_ACTIVITY_ENERGY_THRESHOLD ||
+    midEnergy >= AUDIO_ACTIVITY_ENERGY_THRESHOLD ||
+    trebleEnergy >= AUDIO_ACTIVITY_ENERGY_THRESHOLD
+  )
+}
+
+export function isAudioAnalyserDebugEnabled() {
+  try {
+    return (
+      typeof window !== 'undefined' &&
+      window.localStorage.getItem(AUDIO_ANALYSER_DEBUG_STORAGE_KEY) === '1'
+    )
+  } catch {
+    // Debugging is optional, including when browser storage is unavailable.
+    return false
+  }
+}
+
+export function summarizeAnalyserSnapshot(
+  snapshot: GitPulseAnalyserSnapshot,
+  options: {
+    attached: boolean
+    contextState: string
+  },
+): AudioAnalyserDebugSummary {
+  let waveformMin = 0
+  let waveformMax = 0
+
+  for (const sample of snapshot.waveform) {
+    waveformMin = Math.min(waveformMin, sample)
+    waveformMax = Math.max(waveformMax, sample)
+  }
+
+  let frequencyMax = 0
+
+  for (const bin of snapshot.frequency) {
+    frequencyMax = Math.max(frequencyMax, bin)
+  }
+
+  return {
+    source: 'audioAnalyser',
+    attached: options.attached,
+    contextState: options.contextState,
+    waveformMin: roundToFourDecimals(waveformMin),
+    waveformMax: roundToFourDecimals(waveformMax),
+    frequencyMax,
+    rms: roundToFourDecimals(snapshot.rms),
+    bassEnergy: roundToFourDecimals(snapshot.bassEnergy),
+    midEnergy: roundToFourDecimals(snapshot.midEnergy),
+    trebleEnergy: roundToFourDecimals(snapshot.trebleEnergy),
+    isAudioActive: snapshot.isAudioActive,
+  }
+}
+
 class GitPulseAudioAnalyser {
   private tone?: ToneModule
   private waveformAnalyser?: Waveform
   private frequencyAnalyser?: FFT
+  private lastDebugLogAt = 0
 
   attach(Tone: ToneModule, source: ToneConnectable) {
     if (this.waveformAnalyser || this.frequencyAnalyser) {
@@ -108,11 +192,21 @@ class GitPulseAudioAnalyser {
 
   getSnapshot(): GitPulseAnalyserSnapshot {
     if (!this.tone || !this.waveformAnalyser || !this.frequencyAnalyser) {
-      return createSilentAnalyserSnapshot()
+      const snapshot = createSilentAnalyserSnapshot()
+
+      this.logDebugSummary(snapshot, 'unattached')
+
+      return snapshot
     }
 
-    if (this.tone.getContext().state !== 'running') {
-      return createSilentAnalyserSnapshot()
+    const contextState = this.tone.getContext().state
+
+    if (contextState !== 'running') {
+      const snapshot = createSilentAnalyserSnapshot()
+
+      this.logDebugSummary(snapshot, contextState)
+
+      return snapshot
     }
 
     const waveformValues = this.waveformAnalyser.getValue()
@@ -123,25 +217,24 @@ class GitPulseAudioAnalyser {
     )
     const rms = calculateRms(waveform)
     const { bassEnergy, midEnergy, trebleEnergy } = calculateAnalyserEnergies(frequency)
-    const isAudioActive =
-      rms >= AUDIO_ACTIVITY_RMS_THRESHOLD ||
-      bassEnergy >= AUDIO_ACTIVITY_ENERGY_THRESHOLD ||
-      midEnergy >= AUDIO_ACTIVITY_ENERGY_THRESHOLD ||
-      trebleEnergy >= AUDIO_ACTIVITY_ENERGY_THRESHOLD
-
-    if (!isAudioActive) {
-      return createSilentAnalyserSnapshot()
-    }
-
-    return {
+    const snapshot = {
       waveform,
       frequency,
       rms,
       bassEnergy,
       midEnergy,
       trebleEnergy,
-      isAudioActive,
+      isAudioActive: calculateIsAudioActive({
+        rms,
+        bassEnergy,
+        midEnergy,
+        trebleEnergy,
+      }),
     }
+
+    this.logDebugSummary(snapshot, contextState)
+
+    return snapshot
   }
 
   dispose() {
@@ -151,10 +244,36 @@ class GitPulseAudioAnalyser {
     this.frequencyAnalyser = undefined
     this.tone = undefined
   }
+
+  private logDebugSummary(snapshot: GitPulseAnalyserSnapshot, contextState: string) {
+    if (!isAudioAnalyserDebugEnabled()) {
+      return
+    }
+
+    const now = Date.now()
+
+    if (now - this.lastDebugLogAt < AUDIO_ANALYSER_DEBUG_LOG_INTERVAL_MS) {
+      return
+    }
+
+    this.lastDebugLogAt = now
+
+    console.info(
+      '[GitPulse]',
+      summarizeAnalyserSnapshot(snapshot, {
+        attached: Boolean(this.tone && this.waveformAnalyser && this.frequencyAnalyser),
+        contextState,
+      }),
+    )
+  }
 }
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
+}
+
+function roundToFourDecimals(value: number) {
+  return Math.round(value * 10_000) / 10_000
 }
 
 export const gitPulseAudioAnalyser = new GitPulseAudioAnalyser()

@@ -1,15 +1,35 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   calculateAnalyserEnergies,
   calculateBandEnergy,
+  calculateIsAudioActive,
   calculateRms,
   createSilentAnalyserSnapshot,
   DEFAULT_ANALYSER_FREQUENCY_SIZE,
   DEFAULT_ANALYSER_WAVEFORM_SIZE,
+  isAudioAnalyserDebugEnabled,
+  gitPulseAudioAnalyser,
   normaliseByteEnergy,
+  summarizeAnalyserSnapshot,
 } from './audioAnalyser'
 
 describe('audio analyser helpers', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it.each(['getter', 'getItem'])('keeps sampling when the storage %s throws', (failure) => {
+    const denyStorage = () => {
+      throw new DOMException('Storage blocked', 'SecurityError')
+    }
+    if (failure === 'getter') {
+      vi.spyOn(window, 'localStorage', 'get').mockImplementation(denyStorage)
+    } else {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(denyStorage)
+    }
+
+    expect(isAudioAnalyserDebugEnabled()).toBe(false)
+    expect(gitPulseAudioAnalyser.getSnapshot()).toEqual(createSilentAnalyserSnapshot())
+  })
+
   it('creates a silent analyser snapshot with stable empty-state values', () => {
     const snapshot = createSilentAnalyserSnapshot()
 
@@ -59,5 +79,67 @@ describe('audio analyser helpers', () => {
     expect(energies.bassEnergy).toBeLessThanOrEqual(1)
     expect(energies.midEnergy).toBeLessThanOrEqual(1)
     expect(energies.trebleEnergy).toBeLessThanOrEqual(1)
+  })
+
+  it('treats low but real analyser activity as active', () => {
+    expect(
+      calculateIsAudioActive({
+        rms: 0.0045,
+        bassEnergy: 0.002,
+        midEnergy: 0.001,
+        trebleEnergy: 0.001,
+      }),
+    ).toBe(true)
+
+    expect(
+      calculateIsAudioActive({
+        rms: 0.001,
+        bassEnergy: 0.003,
+        midEnergy: 0.002,
+        trebleEnergy: 0.002,
+      }),
+    ).toBe(false)
+  })
+
+  it('enables analyser debug only when the localStorage flag is set', () => {
+    localStorage.removeItem('gitpulse.debug.audioAnalyser')
+    expect(isAudioAnalyserDebugEnabled()).toBe(false)
+
+    localStorage.setItem('gitpulse.debug.audioAnalyser', '1')
+    expect(isAudioAnalyserDebugEnabled()).toBe(true)
+
+    localStorage.removeItem('gitpulse.debug.audioAnalyser')
+  })
+
+  it('summarises analyser snapshots without logging full arrays', () => {
+    const summary = summarizeAnalyserSnapshot(
+      {
+        waveform: new Float32Array([-0.2, 0.1, 0.4]),
+        frequency: new Uint8Array([0, 80, 160]),
+        rms: 0.0543,
+        bassEnergy: 0.11,
+        midEnergy: 0.08,
+        trebleEnergy: 0.03,
+        isAudioActive: true,
+      },
+      {
+        attached: true,
+        contextState: 'running',
+      },
+    )
+
+    expect(summary).toEqual({
+      source: 'audioAnalyser',
+      attached: true,
+      contextState: 'running',
+      waveformMin: -0.2,
+      waveformMax: 0.4,
+      frequencyMax: 160,
+      rms: 0.0543,
+      bassEnergy: 0.11,
+      midEnergy: 0.08,
+      trebleEnergy: 0.03,
+      isAudioActive: true,
+    })
   })
 })

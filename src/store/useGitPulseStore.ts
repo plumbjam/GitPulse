@@ -40,6 +40,8 @@ type GitPulseState = {
   dataset: GitPulseDataset
   isFetching: boolean
   isFetchingContributions: boolean
+  contributionRequestId: number
+  contributionAuthVersion: number
   fetchError?: string
   contributionFetchError?: string
   identityErrors: Record<string, string>
@@ -106,6 +108,8 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
   dataset: createEmptyGitPulseDataset('live'),
   isFetching: false,
   isFetchingContributions: false,
+  contributionRequestId: 0,
+  contributionAuthVersion: 0,
   fetchError: undefined,
   contributionFetchError: undefined,
   identityErrors: {},
@@ -139,6 +143,7 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       const trimmedToken = githubToken.trim()
 
       return {
+        ...invalidateContributionAuth(state),
         githubToken: trimmedToken,
         authMode: state.oauthAccessToken ? 'oauth' : trimmedToken ? 'manual-token' : 'none',
         contributionFetchError: undefined,
@@ -149,10 +154,13 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       const nextIdentityDatasets = state.oauthAccessToken
         ? state.identityDatasets
         : state.identityDatasets.map((dataset) =>
-            dataset.mode === 'live' ? { ...dataset, contributionCalendar: undefined } : dataset,
+            dataset.mode === 'live' && dataset.contributionCalendar
+              ? { ...dataset, contributionCalendar: undefined }
+              : dataset,
           )
 
       return {
+        ...invalidateContributionAuth(state),
         githubToken: '',
         authMode: state.oauthAccessToken ? 'oauth' : 'none',
         identityDatasets: nextIdentityDatasets,
@@ -183,13 +191,14 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       tokenType: metadata?.tokenType ?? 'bearer',
       scope: metadata?.scope ?? '',
     })
-    set({
+    set((state) => ({
+      ...invalidateContributionAuth(state),
       authMode: 'oauth',
       oauthAccessToken: trimmedToken,
       oauthStatus: 'connected',
       oauthError: undefined,
       contributionFetchError: undefined,
-    })
+    }))
   },
   clearOAuthSession: () => {
     clearGitHubOAuthSession()
@@ -197,11 +206,14 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       const shouldClearCalendars = !state.githubToken
       const nextIdentityDatasets = shouldClearCalendars
         ? state.identityDatasets.map((dataset) =>
-            dataset.mode === 'live' ? { ...dataset, contributionCalendar: undefined } : dataset,
+            dataset.mode === 'live' && dataset.contributionCalendar
+              ? { ...dataset, contributionCalendar: undefined }
+              : dataset,
           )
         : state.identityDatasets
 
       return {
+        ...invalidateContributionAuth(state),
         authMode: state.githubToken ? 'manual-token' : 'none',
         oauthAccessToken: undefined,
         oauthStatus: 'idle',
@@ -234,12 +246,13 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       return
     }
 
-    set({
+    set((state) => ({
+      ...invalidateContributionAuth(state),
       authMode: 'oauth',
       oauthAccessToken: session.accessToken,
       oauthStatus: 'connected',
       oauthError: undefined,
-    })
+    }))
   },
   fetchAndAddIdentity: async (username) => {
     const trimmedUsername = normaliseGitHubUsernameInput(username)
@@ -296,6 +309,7 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       let contributionFetchError: string | undefined
 
       const graphqlToken = getGraphqlAccessToken(get())
+      const authVersion = get().contributionAuthVersion
 
       if (resolvedDataset.identity.status === 'success' && graphqlToken) {
         const contributionResult = await loadContributionCalendarForUsername(
@@ -303,27 +317,26 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
           graphqlToken,
         )
 
-        if (contributionResult.status === 'success') {
-          resolvedDataset = {
-            ...resolvedDataset,
-            contributionCalendar: contributionResult.calendar,
+        // Keep the public identity result, but discard data from an old session.
+        if (authVersion === get().contributionAuthVersion) {
+          if (contributionResult.status === 'success') {
+            resolvedDataset = {
+              ...resolvedDataset,
+              contributionCalendar: contributionResult.calendar,
+            }
+          } else {
+            contributionFetchError = `Could not load contribution calendar for @${resolvedDataset.identity.username}. Using approximate fallback.`
           }
-        } else {
-          contributionFetchError = `Could not load contribution calendar for @${resolvedDataset.identity.username}. Using approximate fallback.`
         }
       }
 
       set((state) => {
-        if (
-          !state.identityDatasets.some(
-            (dataset) => dataset.identity.id === loadingDataset.identity.id,
-          )
-        ) {
+        if (!state.identityDatasets.some((dataset) => dataset === loadingDataset)) {
           return {}
         }
 
         const nextIdentityDatasets = state.identityDatasets.map((dataset) =>
-          dataset.identity.id === loadingDataset.identity.id ? resolvedDataset : dataset,
+          dataset === loadingDataset ? resolvedDataset : dataset,
         )
 
         return {
@@ -352,16 +365,12 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       )
 
       set((state) => {
-        if (
-          !state.identityDatasets.some(
-            (dataset) => dataset.identity.id === loadingDataset.identity.id,
-          )
-        ) {
+        if (!state.identityDatasets.some((dataset) => dataset === loadingDataset)) {
           return {}
         }
 
         const nextIdentityDatasets = state.identityDatasets.map((dataset) =>
-          dataset.identity.id === loadingDataset.identity.id ? fallbackDataset : dataset,
+          dataset === loadingDataset ? fallbackDataset : dataset,
         )
 
         return {
@@ -381,6 +390,8 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
   refreshContributionCalendars: async () => {
     const { identityDatasets } = get()
     const graphqlToken = getGraphqlAccessToken(get())
+    const requestId = get().contributionRequestId + 1
+    set({ contributionRequestId: requestId })
 
     if (!identityDatasets.length) {
       set({
@@ -393,7 +404,9 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
     if (!graphqlToken) {
       set((state) => {
         const nextIdentityDatasets = state.identityDatasets.map((dataset) =>
-          dataset.mode === 'live' ? { ...dataset, contributionCalendar: undefined } : dataset,
+          dataset.mode === 'live' && dataset.contributionCalendar
+            ? { ...dataset, contributionCalendar: undefined }
+            : dataset,
         )
 
         return {
@@ -430,8 +443,13 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
     )
 
     set((state) => {
+      if (state.contributionRequestId !== requestId) {
+        return {}
+      }
+
       const nextIdentityDatasets = state.identityDatasets.map((dataset) => {
-        if (dataset.mode !== 'live' || dataset.identity.status !== 'success') {
+        // New/replaced identities belong to a different request, even with the same username.
+        if (!liveIdentityDatasets.includes(dataset)) {
           return dataset
         }
 
@@ -439,7 +457,9 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
           getGitHubUsernameKey(dataset.identity.username),
         )
 
-        if (!contributionResult || contributionResult.status === 'error') {
+        if (!contributionResult) return dataset
+
+        if (contributionResult.status === 'error') {
           return {
             ...dataset,
             contributionCalendar: undefined,
@@ -474,6 +494,7 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       const nextMode = getDatasetMode(nextIdentityDatasets)
 
       return {
+        contributionRequestId: state.contributionRequestId + 1,
         identityDatasets: nextIdentityDatasets,
         dataset: nextIdentityDatasets.length
           ? mergeIdentityDatasets(nextIdentityDatasets, { mode: nextMode })
@@ -496,7 +517,8 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
   loadDemoDataset: () => {
     const demoIdentityDatasets = createDemoIdentityDatasets()
 
-    set({
+    set((state) => ({
+      contributionRequestId: state.contributionRequestId + 1,
       identityDatasets: demoIdentityDatasets,
       dataset: mergeIdentityDatasets(demoIdentityDatasets, { mode: 'demo' }),
       isFetching: false,
@@ -513,10 +535,11 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       currentPlayheadDate: undefined,
       activeAudioStepIndex: null,
       activeAudioDate: undefined,
-    })
+    }))
   },
   clearDataset: () =>
-    set({
+    set((state) => ({
+      contributionRequestId: state.contributionRequestId + 1,
       identityDatasets: [],
       dataset: createEmptyGitPulseDataset('live'),
       isFetching: false,
@@ -533,7 +556,7 @@ export const useGitPulseStore = create<GitPulseState>((set, get) => ({
       currentPlayheadDate: undefined,
       activeAudioStepIndex: null,
       activeAudioDate: undefined,
-    }),
+    })),
   setTempo: (tempo) =>
     set({
       tempo: clamp(tempo, AUDIO_BPM_RANGE.min, AUDIO_BPM_RANGE.max),
@@ -662,6 +685,14 @@ function getDatasetMode(identityDatasets: GitPulseIdentityDataset[]) {
 
 function getGraphqlAccessToken(state: GitPulseState) {
   return state.oauthAccessToken || state.githubToken
+}
+
+function invalidateContributionAuth(state: GitPulseState) {
+  return {
+    contributionAuthVersion: state.contributionAuthVersion + 1,
+    contributionRequestId: state.contributionRequestId + 1,
+    isFetchingContributions: false,
+  }
 }
 
 async function loadContributionCalendarForUsername(username: string, githubToken: string) {

@@ -12,12 +12,8 @@ export const visualTheme: VisualTheme = {
     glow: '#22d3ee',
   },
   trace: {
-    sampleCount: 220,
-    spanX: 7.2,
-    cycleLength: 6.2,
-    speed: 0.58,
-    baseAmplitude: 0.032,
-    pulseAmplitude: 0.16,
+    sampleCount: 721,
+    headSampleCount: 40,
   },
   layers: [
     {

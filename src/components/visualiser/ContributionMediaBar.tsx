@@ -103,14 +103,14 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
   const canStop =
     patternStepCount > 0 &&
     !isPreparing &&
-    (isAudioPlaying || playheadStepIndex !== selectedStepIndex)
+    (isAudioPlaying || gitPulseAudioEngine.isPaused() || playheadStepIndex !== selectedStepIndex)
   const isAtFirstStep = playheadStepIndex <= 0
   const isAtFinalStep = patternStepCount === 0 || playheadStepIndex >= maxStepIndex
   const transportStatusLabel = isPreparing
     ? 'Starting'
     : isAudioPlaying
       ? 'Playing'
-      : playheadStepIndex !== selectedStepIndex
+      : gitPulseAudioEngine.isPaused() || playheadStepIndex !== selectedStepIndex
         ? 'Paused'
         : 'Ready'
   const audioSourceLabel = pattern
@@ -161,7 +161,7 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
 
   useEffect(() => {
     if (!isAudioPlaying) {
-      gitPulseAudioEngine.stop()
+      gitPulseAudioEngine.stopIfPlaying()
     }
   }, [isAudioPlaying])
 
@@ -185,7 +185,7 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
     setIsPreparing(true)
     setAudioError(undefined)
     setCurrentPlayheadStep(startStepIndex, startStep?.date)
-    setActiveAudioStep(startStepIndex, startStep?.date)
+    resetActiveAudioStep()
 
     try {
       await gitPulseAudioEngine.play(pattern, {
@@ -209,7 +209,7 @@ export function ContributionMediaBar({ pattern }: ContributionMediaBarProps) {
   }
 
   function handlePause() {
-    gitPulseAudioEngine.stop()
+    gitPulseAudioEngine.pause()
     setAudioError(undefined)
     setAudioPlaying(false)
     resetActiveAudioStep()
